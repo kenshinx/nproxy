@@ -1,0 +1,5 @@
+22187 [2014-09-12 12:24:09.860] log.c:91 This is debug message: 13123, ken
+22191 [2014-09-12 12:24:21.022] log.c:91 This is debug message: 13123, ken
+22200 [2014-09-12 12:24:44.170] log.c:91 This is debug message: 13123, ken
+22211 [2014-09-12 12:25:48.] log.c:91 This is debug message: 13123, ken
+22238 [2014-09-12 12:30:55.] log.c:87 This is debug message: 13123, ken
