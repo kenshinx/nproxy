@@ -1,0 +1,104 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+CC	Makefile	/^CC?=gcc$/;"	m
+CRLF	nproxy.h	19;"	d
+DEBUG	Makefile	/^DEBUG=-g -ggdb$/;"	m
+DEPENDENCY_TARGETS	Makefile	/^DEPENDENCY_TARGETS=libyaml$/;"	m
+FINAL_CFLAGS	Makefile	/^FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS)$/;"	m
+FINAL_LDFLAGS	Makefile	/^FINAL_LDFLAGS=$(LDFLAGS) $(DEBUG)$/;"	m
+FINAL_LIBS	Makefile	/^FINAL_LIBS=-lm$/;"	m
+INSTALL	Makefile	/^INSTALL=install$/;"	m
+INSTALL_BIN	Makefile	/^INSTALL_BIN=$(PREFIX)\/bin$/;"	m
+LOG_CRITICAL	log.h	10;"	d
+LOG_DEBUG	log.h	4;"	d
+LOG_ERROR	log.h	9;"	d
+LOG_INFO	log.h	6;"	d
+LOG_MAX_LENGTH	log.h	12;"	d
+LOG_NOTICE	log.h	7;"	d
+LOG_VERBOSE	log.h	5;"	d
+LOG_WARN	log.h	8;"	d
+NPROXY_BIN	Makefile	/^NPROXY_BIN=nproxy$/;"	m
+NPROXY_CC	Makefile	/^NPROXY_CC=$(CC) $(FINAL_CFLAGS)$/;"	m
+NPROXY_DEFAULT_CONFIG_FILE	nproxy.h	13;"	d
+NPROXY_DEFAULT_DAEMONIZE	nproxy.h	16;"	d
+NPROXY_DEFAULT_LISTEN	nproxy.h	14;"	d
+NPROXY_DEFAULT_LOG_LEVEL	nproxy.h	17;"	d
+NPROXY_DEFAULT_PORT	nproxy.h	15;"	d
+NPROXY_LD	Makefile	/^NPROXY_LD=$(CC) $(FINAL_LDFLAGS)$/;"	m
+NPROXY_OBJ	Makefile	/^NPROXY_OBJ=nproxy.o config.o util.o log.o$/;"	m
+NPROXY_VERSION	nproxy.h	12;"	d
+NP_ERROR	nproxy.h	21;"	d
+NP_OK	nproxy.h	20;"	d
+OPT	Makefile	/^OPT=-02$/;"	m
+OS	Makefile	/^OS := $(shell sh -c 'uname -s 2>\/dev\/null || echo unknow')$/;"	m
+PREFIX	Makefile	/^PREFIX?=$(ROOT)$/;"	m
+RM	Makefile	/^RM=rm -rf$/;"	m
+ROOT	Makefile	/^ROOT := $(shell sh -c 'cd .. ; pwd')$/;"	m
+STD	Makefile	/^STD=-STD=C99 -pendantic$/;"	m
+WARN	Makefile	/^WARN=-Wall -W$/;"	m
+_DPROXY_H_	nproxy.h	2;"	d
+_NPROXY_CONFIG_H_	config.h	5;"	d
+_NPROXY_LOG_H_	log.h	2;"	d
+_NPROXY_UTIL_H_	util.h	2;"	d
+_log	log.c	/^_log(int level, const char *file, int line, const char *fmt, ...)$/;"	f
+_log_stream	log.c	/^_log_stream(FILE *stream, const char *fmt, ...)$/;"	f
+_np_malloc	util.c	/^_np_malloc(size_t size, const char *fname, int line)$/;"	f
+array_length	util.c	/^array_length(char *arr[])$/;"	f
+config	config.h	/^struct config {$/;"	s
+config_creat	config.c	/^config_creat(char *filename)$/;"	f
+config_file	config.h	/^    char *config_file;$/;"	m	struct:config_server
+config_log	config.h	/^struct config_log {$/;"	s
+config_open	config.c	/^config_open(char *filename)$/;"	f
+config_server	config.h	/^struct config_server {$/;"	s
+configfile	nproxy.h	/^    char        *configfile;$/;"	m	struct:nproxy_server
+daemon	nproxy.h	/^    int         daemon;$/;"	m	struct:nproxy_server
+daemonize	config.h	/^    int daemonize;$/;"	m	struct:config_server
+fd	config.h	/^    FILE *fd;$/;"	m	struct:config
+fd	log.h	/^    FILE *fd;$/;"	m	struct:logger
+file	config.h	/^    char *file;$/;"	m	struct:config_log
+fname	config.h	/^    char *fname; $/;"	m	struct:config
+level	config.h	/^    char *level;$/;"	m	struct:config_log
+level	log.h	/^    int level;$/;"	m	struct:logger
+listen	config.h	/^    char *listen;$/;"	m	struct:config_server
+listen	nproxy.h	/^    char        *listen;$/;"	m	struct:nproxy_server
+log_crit	log.h	34;"	d
+log_debug	log.h	14;"	d
+log_detroy	log.c	/^log_detroy(void)$/;"	f
+log_error	log.h	30;"	d
+log_info	log.h	18;"	d
+log_init	log.c	/^log_init(int level, char *name)$/;"	f
+log_level_to_text	log.c	/^log_level_to_text(int level)$/;"	f
+log_notice	log.h	22;"	d
+log_set_level	log.c	/^log_set_level(int level)$/;"	f
+log_stderr	log.h	39;"	d
+log_stdout	log.h	43;"	d
+log_warn	log.h	26;"	d
+logfile	nproxy.h	/^    char        *logfile;$/;"	m	struct:nproxy_server
+logger	log.c	/^static struct logger logger;$/;"	v	typeref:struct:logger	file:
+logger	log.h	/^struct logger {$/;"	s
+loglevel	nproxy.h	/^    int         loglevel;$/;"	m	struct:nproxy_server
+main	log.c	/^main()$/;"	f
+main	nproxy.c	/^main(int argc, char **argv)$/;"	f
+name	log.h	/^    char *name;$/;"	m	struct:logger
+np_get_absolute_path	util.c	/^np_get_absolute_path(char *filename)$/;"	f
+np_get_current_path	util.c	/^np_get_current_path(void)$/;"	f
+np_init_log	nproxy.c	/^np_init_log(struct nproxy_server *server)$/;"	f	file:
+np_init_server_config	nproxy.c	/^np_init_server_config(struct nproxy_server *server)$/;"	f	file:
+np_load_server_config	nproxy.c	/^np_load_server_config(struct nproxy_server *server)$/;"	f	file:
+np_malloc	util.h	4;"	d
+np_parse_option	nproxy.c	/^np_parse_option(int argc, char **argv, struct nproxy_server *server)$/;"	f	file:
+np_print_run	nproxy.c	/^np_print_run(struct nproxy_server *server)$/;"	f	file:
+np_print_version	nproxy.c	/^np_print_version(void)$/;"	f	file:
+np_run	nproxy.c	/^np_run(struct nproxy_server *server)$/;"	f	file:
+np_setup_server	nproxy.c	/^np_setup_server(struct nproxy_server *server)$/;"	f	file:
+np_show_usage	nproxy.c	/^np_show_usage(void)$/;"	f	file:
+np_status_t	nproxy.h	/^typedef int np_status_t;$/;"	t
+nproxy_server	nproxy.h	/^struct nproxy_server {$/;"	s
+pid	nproxy.h	/^    pid_t       pid;$/;"	m	struct:nproxy_server
+pidfile	nproxy.h	/^    char        *pidfile;$/;"	m	struct:nproxy_server
+port	config.h	/^    int  port;$/;"	m	struct:config_server
+port	nproxy.h	/^    uint16_t    port;$/;"	m	struct:nproxy_server

@@ -31,7 +31,7 @@ NPROXY_OBJ=nproxy.o config.o util.o log.o
 nproxy.o: nproxy.c nproxy.h config.h config.c util.h log.h
 config.o: config.c config.h util.h ../contrib/libyaml/include/yaml.h
 log.o: log.c log.h
-util.o: util.h
+util.o: util.c util.h
 
 $(NPROXY_BIN): $(NPROXY_OBJ)
 	$(NPROXY_LD) -o $@ $^ $(FINAL_LIBS)  
@@ -52,7 +52,7 @@ install: all
 	
 
 clean: 
-	$(RM) $(NPROXY_BIN) *.o
+	$(RM) $(NPROXY_BIN) *.o *.gch *.swp
 
 .PHONY: clean
 

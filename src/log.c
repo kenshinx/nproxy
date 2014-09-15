@@ -5,10 +5,10 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <time.h>
+#include <string.h>
 #include <sys/time.h>
 
 #include "log.h"
-
 
 static struct logger logger;
 
@@ -51,6 +51,34 @@ log_set_level(int level)
     l->level = level;
 }
 
+char *
+log_level_to_text(int level)
+{
+    char *level_text;
+    char *temp;
+    int max_level;
+    const char *log_level_map[] = {"DEBUG",
+                                   "VERBOSE", 
+                                   "INFO", 
+                                   "NOTICE", 
+                                   "WARN", 
+                                   "ERROR", 
+                                   "CRITICAL"};
+    /*
+    max_level = string_array_length(log_level_map);
+    if (level >= max_level) {
+        return NULL;
+    }
+    */
+    temp = log_level_map[level];
+    level_text = malloc(strlen(temp) + 1);
+    if (level_text == NULL) {
+        return NULL;
+    }
+    strcpy(level_text, temp);
+    return level_text;
+}
+
 
 void
 _log(int level, const char *file, int line, const char *fmt, ...)
@@ -74,8 +102,8 @@ _log(int level, const char *file, int line, const char *fmt, ...)
     off = strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S.", localtime(&tv.tv_sec));
     //snprintf(buf+off,sizeof(buf)-off,"%03d",(int)tv.tv_usec/1000);
 
-    fprintf(l->fd, "%d [%s] %s:%d %s\n", 
-            (int)getpid(), buf, file, line, msg);
+    fprintf(l->fd, "%d [%s] %s:%d (%s): %s\n", 
+            (int)getpid(), buf, file, line, log_level_to_text(level), msg);
     fflush(l->fd);
 }
 
@@ -93,12 +121,12 @@ _log_stream(FILE *stream, const char *fmt, ...)
     fprintf(stream, "%s\n", msg);
 }
 
-/**
+/*
 int
 main()
 {
-    log_init(LOG_DEBUG, "nproxy.log");
-    log_info("This is debug message: from %s", "ken");
+    log_init(LOG_DEBUG, "");
+    log_debug("This is debug message: from %s", "ken");
     exit(1); 
 }
 */

@@ -15,7 +15,8 @@ np_show_usage(void)
     log_stderr(
         "Usage:" CRLF
         "   -h --help           :this help" CRLF
-        "   -v --version        :show version and exit" CRLF
+        "   -V --version        :show version and exit" CRLF
+        "   -v --verbose        :set log level be debug" CRLF
         "   -c --config         :set configuration file (default:%s)" CRLF
         "",
         confile
@@ -39,7 +40,7 @@ np_init_server_config(struct nproxy_server *server)
     server->listen = NPROXY_DEFAULT_LISTEN;
     server->port = NPROXY_DEFAULT_PORT;
     server->daemon = NPROXY_DEFAULT_DAEMONIZE;
-    server->logfile = NULL;
+    server->logfile = NPROXY_DEFAULT_LOG_FILE;
     server->loglevel = NPROXY_DEFAULT_LOG_LEVEL;
     server->pid = getpid();
 }
@@ -49,8 +50,11 @@ np_parse_option(int argc, char **argv, struct nproxy_server *server)
 {
     char *configfile = NPROXY_DEFAULT_CONFIG_FILE;
     if (argc >= 2) {   
-        if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--version") == 0) {
+        if (strcmp(argv[1], "-V") == 0 || strcmp(argv[1], "--version") == 0) {
             np_print_version();
+        }
+        if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--verbose") == 0) {
+            server->loglevel = LOG_DEBUG;
         }
         if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
             np_show_usage();
@@ -77,7 +81,8 @@ np_parse_option(int argc, char **argv, struct nproxy_server *server)
 static np_status_t
 np_load_server_config(struct nproxy_server *server)
 {
-    config_init(server->configfile);
+    
+    config_creat(server->configfile);
     return NP_OK;
     
 }
@@ -95,17 +100,17 @@ np_setup_server(struct nproxy_server *server)
 {
     np_status_t status;
 
-    status = np_load_server_config(server);
-    if (status != NP_OK) {
-        log_stderr("load config '%s' failed", server->configfile);
-        return status;
-    }      
-
     status = np_init_log(server);
     if (status != NP_OK) {
         log_stderr("init log failed");
         return status;
     }
+
+    status = np_load_server_config(server);
+    if (status != NP_OK) {
+        log_stderr("load config '%s' failed", server->configfile);
+        return status;
+    }      
 
     return NP_OK;
 }

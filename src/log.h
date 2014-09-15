@@ -1,6 +1,9 @@
 #ifndef _NPROXY_LOG_H_
 #define _NPROXY_LOG_H_
 
+#include <fcntl.h>
+#include <stdio.h>
+
 #define LOG_DEBUG       0
 #define LOG_VERBOSE     1
 #define LOG_INFO        2
@@ -53,6 +56,7 @@ struct logger {
 int log_init(int level, char *name);
 void log_destory(void);
 void log_set_level(int level);
+char *log_level_to_text(int level);
 void _log(int level, const char *file, int line, const char *fmt, ...);
 void _log_stream(FILE *stream, const char *fmt, ...);
 
