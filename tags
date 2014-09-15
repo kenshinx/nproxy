@@ -26,7 +26,7 @@ CHECK	contrib/libyaml/src/yaml_private.h	167;"	d
 CHECK_AT	contrib/libyaml/src/yaml_private.h	160;"	d
 CLEAR	contrib/libyaml/src/yaml_private.h	139;"	d
 COPY	contrib/libyaml/src/yaml_private.h	383;"	d
-CRLF	src/nproxy.h	19;"	d
+CRLF	src/nproxy.h	20;"	d
 DEBUG	src/Makefile	/^DEBUG=-g -ggdb$/;"	m
 DEPENDENCY_TARGETS	src/Makefile	/^DEPENDENCY_TARGETS=libyaml$/;"	m
 DEQUEUE	contrib/libyaml/src/yaml_private.h	460;"	d
@@ -77,14 +77,14 @@ IS_TAB_AT	contrib/libyaml/src/yaml_private.h	298;"	d
 IS_Z	contrib/libyaml/src/yaml_private.h	273;"	d
 IS_Z_AT	contrib/libyaml/src/yaml_private.h	271;"	d
 JOIN	contrib/libyaml/src/yaml_private.h	143;"	d
-LOG_CRITICAL	src/log.h	10;"	d
-LOG_DEBUG	src/log.h	4;"	d
-LOG_ERROR	src/log.h	9;"	d
-LOG_INFO	src/log.h	6;"	d
-LOG_MAX_LENGTH	src/log.h	12;"	d
-LOG_NOTICE	src/log.h	7;"	d
-LOG_VERBOSE	src/log.h	5;"	d
-LOG_WARN	src/log.h	8;"	d
+LOG_CRITICAL	src/log.h	13;"	d
+LOG_DEBUG	src/log.h	7;"	d
+LOG_ERROR	src/log.h	12;"	d
+LOG_INFO	src/log.h	9;"	d
+LOG_MAX_LENGTH	src/log.h	15;"	d
+LOG_NOTICE	src/log.h	10;"	d
+LOG_VERBOSE	src/log.h	8;"	d
+LOG_WARN	src/log.h	11;"	d
 LONG	contrib/libyaml/tests/test-reader.c	205;"	d	file:
 MAPPING_END_EVENT_INIT	contrib/libyaml/src/yaml_private.h	584;"	d
 MAPPING_NODE_INIT	contrib/libyaml/src/yaml_private.h	633;"	d
@@ -106,13 +106,14 @@ NPROXY_CC	src/Makefile	/^NPROXY_CC=$(CC) $(FINAL_CFLAGS)$/;"	m
 NPROXY_DEFAULT_CONFIG_FILE	src/nproxy.h	13;"	d
 NPROXY_DEFAULT_DAEMONIZE	src/nproxy.h	16;"	d
 NPROXY_DEFAULT_LISTEN	src/nproxy.h	14;"	d
-NPROXY_DEFAULT_LOG_LEVEL	src/nproxy.h	17;"	d
+NPROXY_DEFAULT_LOG_FILE	src/nproxy.h	17;"	d
+NPROXY_DEFAULT_LOG_LEVEL	src/nproxy.h	18;"	d
 NPROXY_DEFAULT_PORT	src/nproxy.h	15;"	d
 NPROXY_LD	src/Makefile	/^NPROXY_LD=$(CC) $(FINAL_LDFLAGS)$/;"	m
 NPROXY_OBJ	src/Makefile	/^NPROXY_OBJ=nproxy.o config.o util.o log.o$/;"	m
 NPROXY_VERSION	src/nproxy.h	12;"	d
-NP_ERROR	src/nproxy.h	21;"	d
-NP_OK	src/nproxy.h	20;"	d
+NP_ERROR	src/nproxy.h	22;"	d
+NP_OK	src/nproxy.h	21;"	d
 NULL_STRING	contrib/libyaml/src/yaml_private.h	112;"	d
 OPT	src/Makefile	/^OPT=-02$/;"	m
 OS	src/Makefile	/^OS := $(shell sh -c 'uname -s 2>\/dev\/null || echo unknow')$/;"	m
@@ -291,11 +292,14 @@ YAML_VERSION_PATCH	contrib/libyaml/win32/config.h	3;"	d
 YAML_VERSION_STRING	contrib/libyaml/win32/config.h	4;"	d
 YAML_WRITER_ERROR	contrib/libyaml/include/yaml.h	/^    YAML_WRITER_ERROR,$/;"	e	enum:yaml_error_type_e
 _DPROXY_H_	src/nproxy.h	2;"	d
-_NPROXY_CONFIG_H_	src/config.h	5;"	d
+_NPROXY_CONFIG_H_	src/config.h	10;"	d
 _NPROXY_LOG_H_	src/log.h	2;"	d
-_NPROXY_UTIL_H_	src/util.h	3;"	d
+_NPROXY_UTIL_H_	src/util.h	2;"	d
 _log	src/log.c	/^_log(int level, const char *file, int line, const char *fmt, ...)$/;"	f
 _log_stream	src/log.c	/^_log_stream(FILE *stream, const char *fmt, ...)$/;"	f
+_np_assert	src/util.c	/^_np_assert(const char *cond, const char *file, int line, int panic)$/;"	f
+_np_free	src/util.c	/^_np_free(void *ptr, const char *fname, int line)$/;"	f
+_np_malloc	src/util.c	/^_np_malloc(size_t size, const char *fname, int line)$/;"	f
 alias	contrib/libyaml/include/yaml.h	/^        int alias;$/;"	m	struct:yaml_emitter_s::__anon45
 alias	contrib/libyaml/include/yaml.h	/^        } alias;$/;"	m	union:yaml_event_s::__anon9	typeref:struct:yaml_event_s::__anon9::__anon14
 alias	contrib/libyaml/include/yaml.h	/^        } alias;$/;"	m	union:yaml_token_s::__anon1	typeref:struct:yaml_token_s::__anon1::__anon3
@@ -331,10 +335,16 @@ column	contrib/libyaml/include/yaml.h	/^    size_t column;$/;"	m	struct:yaml_mar
 compare_documents	contrib/libyaml/tests/run-dumper.c	/^int compare_documents(yaml_document_t *document1, yaml_document_t *document2)$/;"	f
 compare_events	contrib/libyaml/tests/run-emitter.c	/^int compare_events(yaml_event_t *event1, yaml_event_t *event2)$/;"	f
 compare_nodes	contrib/libyaml/tests/run-dumper.c	/^int compare_nodes(yaml_document_t *document1, int index1,$/;"	f
-conf_log	src/config.h	/^struct conf_log {$/;"	s
-conf_server	src/config.h	/^struct conf_server {$/;"	s
-config_file	src/config.h	/^    char            *config_file;$/;"	m	struct:conf_server
-config_init	src/config.c	/^config_init(char *filename)$/;"	f
+config	src/config.h	/^struct config {$/;"	s
+config_begin_parse	src/config.c	/^config_begin_parse(struct config *cfg)$/;"	f	file:
+config_creat	src/config.c	/^config_creat(char *filename)$/;"	f
+config_file	src/config.h	/^    char *config_file;$/;"	m	struct:config_server
+config_init	src/config.c	/^config_init(char *filename)$/;"	f	file:
+config_log	src/config.h	/^struct config_log {$/;"	s
+config_parse	src/config.c	/^config_parse(struct config *cfg)$/;"	f	file:
+config_server	src/config.h	/^struct config_server {$/;"	s
+config_yaml_deinit	src/config.c	/^config_yaml_deinit(struct config *cfg)$/;"	f	file:
+config_yaml_init	src/config.c	/^config_yaml_init(struct config *cfg)$/;"	f	file:
 configfile	src/nproxy.h	/^    char        *configfile;$/;"	m	struct:nproxy_server
 context	contrib/libyaml/include/yaml.h	/^    const char *context;$/;"	m	struct:yaml_parser_s
 context_mark	contrib/libyaml/include/yaml.h	/^    yaml_mark_t context_mark;$/;"	m	struct:yaml_parser_s
@@ -342,10 +352,11 @@ copy_document	contrib/libyaml/tests/run-dumper.c	/^int copy_document(yaml_docume
 copy_event	contrib/libyaml/tests/run-emitter.c	/^int copy_event(yaml_event_t *event_to, yaml_event_t *event_from)$/;"	f
 current	contrib/libyaml/include/yaml.h	/^            const unsigned char *current;$/;"	m	struct:yaml_parser_s::__anon26::__anon27
 daemon	src/nproxy.h	/^    int         daemon;$/;"	m	struct:nproxy_server
-daemonize	src/config.h	/^    int             daemonize;$/;"	m	struct:conf_server
+daemonize	src/config.h	/^    int daemonize;$/;"	m	struct:config_server
 data	contrib/libyaml/include/yaml.h	/^    } data;$/;"	m	struct:yaml_event_s	typeref:union:yaml_event_s::__anon9
 data	contrib/libyaml/include/yaml.h	/^    } data;$/;"	m	struct:yaml_node_s	typeref:union:yaml_node_s::__anon18
 data	contrib/libyaml/include/yaml.h	/^    } data;$/;"	m	struct:yaml_token_s	typeref:union:yaml_token_s::__anon1
+depth	src/config.h	/^    int             depth;$/;"	m	struct:config
 document	contrib/libyaml/include/yaml.h	/^    yaml_document_t *document;$/;"	m	struct:yaml_emitter_s
 document	contrib/libyaml/include/yaml.h	/^    yaml_document_t *document;$/;"	m	struct:yaml_parser_s
 document	contrib/libyaml/include/yaml.h	/^yaml_document_delete(yaml_document_t *document);$/;"	v
@@ -398,14 +409,17 @@ event	contrib/libyaml/include/yaml.h	/^yaml_event_delete(yaml_event_t *event);$/
 event	contrib/libyaml/include/yaml.h	/^yaml_mapping_end_event_initialize(yaml_event_t *event);$/;"	v
 event	contrib/libyaml/include/yaml.h	/^yaml_sequence_end_event_initialize(yaml_event_t *event);$/;"	v
 event	contrib/libyaml/include/yaml.h	/^yaml_stream_end_event_initialize(yaml_event_t *event);$/;"	v
+event	src/config.h	/^    yaml_event_t    event;$/;"	m	struct:config
 events	contrib/libyaml/include/yaml.h	/^    } events;$/;"	m	struct:yaml_emitter_s	typeref:struct:yaml_emitter_s::__anon42
 fd	src/log.h	/^    FILE *fd;$/;"	m	struct:logger
 file	contrib/libyaml/include/yaml.h	/^        FILE *file;$/;"	m	union:yaml_emitter_s::__anon37
 file	contrib/libyaml/include/yaml.h	/^        FILE *file;$/;"	m	union:yaml_parser_s::__anon26
-file	src/config.h	/^    char            *file;$/;"	m	struct:conf_log
+file	src/config.h	/^    char *file;$/;"	m	struct:config_log
 flow_level	contrib/libyaml/include/yaml.h	/^    int flow_level;$/;"	m	struct:yaml_emitter_s
 flow_level	contrib/libyaml/include/yaml.h	/^    int flow_level;$/;"	m	struct:yaml_parser_s
 flow_plain_allowed	contrib/libyaml/include/yaml.h	/^        int flow_plain_allowed;$/;"	m	struct:yaml_emitter_s::__anon47
+fname	src/config.h	/^    char            *fname; $/;"	m	struct:config
+fp	src/config.h	/^    FILE            *fp;$/;"	m	struct:config
 handle	contrib/libyaml/include/yaml.h	/^            yaml_char_t *handle;$/;"	m	struct:yaml_token_s::__anon1::__anon5
 handle	contrib/libyaml/include/yaml.h	/^            yaml_char_t *handle;$/;"	m	struct:yaml_token_s::__anon1::__anon8
 handle	contrib/libyaml/include/yaml.h	/^        yaml_char_t *handle;$/;"	m	struct:yaml_emitter_s::__anon46
@@ -436,24 +450,25 @@ length	contrib/libyaml/include/yaml.h	/^            size_t length;$/;"	m	struct:
 length	contrib/libyaml/include/yaml.h	/^            size_t length;$/;"	m	struct:yaml_node_s::__anon18::__anon19
 length	contrib/libyaml/include/yaml.h	/^            size_t length;$/;"	m	struct:yaml_token_s::__anon1::__anon6
 length	contrib/libyaml/include/yaml.h	/^        size_t length;$/;"	m	struct:yaml_emitter_s::__anon47
-level	src/config.h	/^    char            *level;$/;"	m	struct:conf_log
+level	src/config.h	/^    char *level;$/;"	m	struct:config_log
 level	src/log.h	/^    int level;$/;"	m	struct:logger
 line	contrib/libyaml/include/yaml.h	/^    int line;$/;"	m	struct:yaml_emitter_s
 line	contrib/libyaml/include/yaml.h	/^    size_t line;$/;"	m	struct:yaml_mark_s
 line_break	contrib/libyaml/include/yaml.h	/^    yaml_break_t line_break;$/;"	m	struct:yaml_emitter_s
-listen	src/config.h	/^    char            *listen;$/;"	m	struct:conf_server
+listen	src/config.h	/^    char *listen;$/;"	m	struct:config_server
 listen	src/nproxy.h	/^    char        *listen;$/;"	m	struct:nproxy_server
-log_crit	src/log.h	34;"	d
-log_debug	src/log.h	14;"	d
+log_crit	src/log.h	37;"	d
+log_debug	src/log.h	17;"	d
 log_detroy	src/log.c	/^log_detroy(void)$/;"	f
-log_error	src/log.h	30;"	d
-log_info	src/log.h	18;"	d
+log_error	src/log.h	33;"	d
+log_info	src/log.h	21;"	d
 log_init	src/log.c	/^log_init(int level, char *name)$/;"	f
-log_notice	src/log.h	22;"	d
+log_level_to_text	src/log.c	/^log_level_to_text(int level)$/;"	f
+log_notice	src/log.h	25;"	d
 log_set_level	src/log.c	/^log_set_level(int level)$/;"	f
-log_stderr	src/log.h	39;"	d
-log_stdout	src/log.h	43;"	d
-log_warn	src/log.h	26;"	d
+log_stderr	src/log.h	42;"	d
+log_stdout	src/log.h	46;"	d
+log_warn	src/log.h	29;"	d
 logfile	src/nproxy.h	/^    char        *logfile;$/;"	m	struct:nproxy_server
 logger	src/log.c	/^static struct logger logger;$/;"	v	typeref:struct:logger	file:
 logger	src/log.h	/^struct logger {$/;"	s
@@ -484,13 +499,16 @@ minor	contrib/libyaml/include/yaml.h	/^    int minor;$/;"	m	struct:yaml_version_
 multiline	contrib/libyaml/include/yaml.h	/^        int multiline;$/;"	m	struct:yaml_emitter_s::__anon47
 name	src/log.h	/^    char *name;$/;"	m	struct:logger
 nodes	contrib/libyaml/include/yaml.h	/^    } nodes;$/;"	m	struct:yaml_document_s	typeref:struct:yaml_document_s::__anon24
+np_assert	src/util.h	11;"	d
+np_free	src/util.h	7;"	d
 np_get_absolute_path	src/util.c	/^np_get_absolute_path(char *filename)$/;"	f
 np_get_current_path	src/util.c	/^np_get_current_path(void)$/;"	f
 np_init_log	src/nproxy.c	/^np_init_log(struct nproxy_server *server)$/;"	f	file:
 np_init_server_config	src/nproxy.c	/^np_init_server_config(struct nproxy_server *server)$/;"	f	file:
 np_load_server_config	src/nproxy.c	/^np_load_server_config(struct nproxy_server *server)$/;"	f	file:
+np_malloc	src/util.h	4;"	d
 np_parse_option	src/nproxy.c	/^np_parse_option(int argc, char **argv, struct nproxy_server *server)$/;"	f	file:
-np_print_start	src/nproxy.c	/^np_print_start(struct nproxy_server *server)$/;"	f	file:
+np_print_run	src/nproxy.c	/^np_print_run(struct nproxy_server *server)$/;"	f	file:
 np_print_version	src/nproxy.c	/^np_print_version(void)$/;"	f	file:
 np_run	src/nproxy.c	/^np_run(struct nproxy_server *server)$/;"	f	file:
 np_setup_server	src/nproxy.c	/^np_setup_server(struct nproxy_server *server)$/;"	f	file:
@@ -506,6 +524,7 @@ parser	contrib/libyaml/include/yaml.h	/^yaml_parser_delete(yaml_parser_t *parser
 parser	contrib/libyaml/include/yaml.h	/^yaml_parser_initialize(yaml_parser_t *parser);$/;"	v
 parser	contrib/libyaml/src/scanner.c	/^yaml_parser_fetch_more_tokens(yaml_parser_t *parser);$/;"	v
 parser	contrib/libyaml/src/yaml_private.h	/^yaml_parser_fetch_more_tokens(yaml_parser_t *parser);$/;"	v
+parser	src/config.h	/^    yaml_parser_t   parser;$/;"	m	struct:config
 pid	src/nproxy.h	/^    pid_t       pid;$/;"	m	struct:nproxy_server
 pidfile	src/nproxy.h	/^    char        *pidfile;$/;"	m	struct:nproxy_server
 plain_implicit	contrib/libyaml/include/yaml.h	/^            int plain_implicit;$/;"	m	struct:yaml_event_s::__anon9::__anon15
@@ -514,7 +533,7 @@ pointer	contrib/libyaml/include/yaml.h	/^        unsigned char *pointer;$/;"	m	s
 pointer	contrib/libyaml/include/yaml.h	/^        yaml_char_t *pointer;$/;"	m	struct:yaml_emitter_s::__anon39
 pointer	contrib/libyaml/include/yaml.h	/^        yaml_char_t *pointer;$/;"	m	struct:yaml_parser_s::__anon28
 pointer	contrib/libyaml/src/yaml_private.h	/^    yaml_char_t *pointer;$/;"	m	struct:__anon49
-port	src/config.h	/^    int             port;$/;"	m	struct:conf_server
+port	src/config.h	/^    int  port;$/;"	m	struct:config_server
 port	src/nproxy.h	/^    uint16_t    port;$/;"	m	struct:nproxy_server
 possible	contrib/libyaml/include/yaml.h	/^    int possible;$/;"	m	struct:yaml_simple_key_s
 prefix	contrib/libyaml/include/yaml.h	/^            yaml_char_t *prefix;$/;"	m	struct:yaml_token_s::__anon1::__anon8
@@ -539,6 +558,7 @@ scalar	contrib/libyaml/include/yaml.h	/^        } scalar;$/;"	m	union:yaml_event
 scalar	contrib/libyaml/include/yaml.h	/^        } scalar;$/;"	m	union:yaml_node_s::__anon18	typeref:struct:yaml_node_s::__anon18::__anon19
 scalar	contrib/libyaml/include/yaml.h	/^        } scalar;$/;"	m	union:yaml_token_s::__anon1	typeref:struct:yaml_token_s::__anon1::__anon6
 scalar_data	contrib/libyaml/include/yaml.h	/^    } scalar_data;$/;"	m	struct:yaml_emitter_s	typeref:struct:yaml_emitter_s::__anon47
+seq	src/config.h	/^    unsigned        seq:1;$/;"	m	struct:config
 sequence	contrib/libyaml/include/yaml.h	/^        } sequence;$/;"	m	union:yaml_node_s::__anon18	typeref:struct:yaml_node_s::__anon18::__anon20
 sequence_context	contrib/libyaml/include/yaml.h	/^    int sequence_context;$/;"	m	struct:yaml_emitter_s
 sequence_start	contrib/libyaml/include/yaml.h	/^        } sequence_start;$/;"	m	union:yaml_event_s::__anon9	typeref:struct:yaml_event_s::__anon9::__anon16
@@ -587,6 +607,7 @@ stream_start	contrib/libyaml/include/yaml.h	/^        } stream_start;$/;"	m	unio
 stream_start_produced	contrib/libyaml/include/yaml.h	/^    int stream_start_produced;$/;"	m	struct:yaml_parser_s
 string	contrib/libyaml/include/yaml.h	/^        } string;$/;"	m	union:yaml_emitter_s::__anon37	typeref:struct:yaml_emitter_s::__anon37::__anon38
 string	contrib/libyaml/include/yaml.h	/^        } string;$/;"	m	union:yaml_parser_s::__anon26	typeref:struct:yaml_parser_s::__anon26::__anon27
+string_array_length	src/util.c	/^string_array_length(char *arr[])$/;"	f
 style	contrib/libyaml/include/yaml.h	/^            yaml_mapping_style_t style;$/;"	m	struct:yaml_event_s::__anon9::__anon17
 style	contrib/libyaml/include/yaml.h	/^            yaml_mapping_style_t style;$/;"	m	struct:yaml_node_s::__anon18::__anon22
 style	contrib/libyaml/include/yaml.h	/^            yaml_scalar_style_t style;$/;"	m	struct:yaml_event_s::__anon9::__anon15
@@ -615,6 +636,7 @@ test	contrib/libyaml/tests/test-reader.c	/^    char *test;$/;"	m	struct:__anon50
 test_case	contrib/libyaml/tests/test-reader.c	/^} test_case;$/;"	t	typeref:struct:__anon50	file:
 title	contrib/libyaml/tests/test-reader.c	/^    char *title;$/;"	m	struct:__anon50	file:
 token	contrib/libyaml/include/yaml.h	/^yaml_token_delete(yaml_token_t *token);$/;"	v
+token	src/config.h	/^    yaml_token_t    token;$/;"	m	struct:config
 token_available	contrib/libyaml/include/yaml.h	/^    int token_available;$/;"	m	struct:yaml_parser_s
 token_number	contrib/libyaml/include/yaml.h	/^    size_t token_number;$/;"	m	struct:yaml_simple_key_s
 tokens	contrib/libyaml/include/yaml.h	/^    } tokens;$/;"	m	struct:yaml_parser_s	typeref:struct:yaml_parser_s::__anon30
@@ -637,6 +659,9 @@ type	contrib/libyaml/include/yaml.h	/^    yaml_token_type_t type;$/;"	m	struct:y
 unicode	contrib/libyaml/include/yaml.h	/^    int unicode;$/;"	m	struct:yaml_emitter_s
 unread	contrib/libyaml/include/yaml.h	/^    size_t unread;$/;"	m	struct:yaml_parser_s
 utf8_sequences	contrib/libyaml/tests/test-reader.c	/^test_case utf8_sequences[] = {$/;"	v
+valid_event	src/config.h	/^    unsigned        valid_event:1;$/;"	m	struct:config
+valid_parser	src/config.h	/^    unsigned        valid_parser:1;$/;"	m	struct:config
+valid_token	src/config.h	/^    unsigned        valid_token:1;$/;"	m	struct:config
 value	contrib/libyaml/include/yaml.h	/^            yaml_char_t *value;$/;"	m	struct:yaml_event_s::__anon9::__anon15
 value	contrib/libyaml/include/yaml.h	/^            yaml_char_t *value;$/;"	m	struct:yaml_node_s::__anon18::__anon19
 value	contrib/libyaml/include/yaml.h	/^            yaml_char_t *value;$/;"	m	struct:yaml_token_s::__anon1::__anon3
