@@ -2,8 +2,6 @@
 #include <unistd.h>
 
 #include "nproxy.h"
-#include "config.h"
-#include "util.h"
 #include "log.h"
 
 
@@ -82,7 +80,13 @@ static np_status_t
 np_load_server_config(struct nproxy_server *server)
 {
     
-    config_creat(server->configfile);
+    struct config *cfg;
+    cfg = config_creat(server->configfile);
+    if (cfg == NULL) {
+        return NP_ERROR;
+    }
+    server->cfg = cfg;
+    log_debug("load config '%s' sucess", server->configfile);
     return NP_OK;
     
 }

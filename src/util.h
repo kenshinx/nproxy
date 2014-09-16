@@ -14,6 +14,7 @@
     }                                           \
 } while (0)
 
+#define NOT_REACHED() np_assert(0)
 
 char *np_get_current_path(void);
 char *np_get_absolute_path(char *filename);
