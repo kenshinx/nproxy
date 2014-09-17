@@ -27,12 +27,13 @@ NPROXY_CC=$(CC) $(FINAL_CFLAGS)
 NPROXY_LD=$(CC) $(FINAL_LDFLAGS)
 
 NPROXY_BIN=nproxy
-NPROXY_OBJ=nproxy.o config.o util.o log.o
+NPROXY_OBJ=nproxy.o config.o util.o log.o array.o
 
 nproxy.o: nproxy.c nproxy.h config.h config.c util.h log.h
 config.o: config.c config.h util.h nproxy.h ../contrib/$(LIBYAML)/include/yaml.h
 log.o: log.c log.h
 util.o: util.c util.h
+array.o: array.h array.o
 
 $(NPROXY_BIN): $(NPROXY_OBJ)
 	$(NPROXY_LD) -o $@ $^ $(FINAL_LIBS) ../contrib/$(LIBYAML)/src/.libs/libyaml.a 
@@ -44,8 +45,9 @@ make-contrib:
 
 .PHONY: make-contrib
 
+all: $(NPROXY_BIN)
 
-all: $(PREPARE) $(NPROXY_BIN)
+#all: $(PREPARE) $(NPROXY_BIN)
 
 .PHONY: all
 

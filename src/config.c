@@ -237,7 +237,11 @@ static np_status_t
 config_parse_core(struct config *cfg, void *data)
 {
     np_status_t status;
-    bool done, leaf, new_pool;
+    bool done, leaf, new_section;
+    char *section;
+    char *key;
+    void *value;
+    void *scalar;
 
     status = config_event_next(cfg);
     if (status != NP_OK) {
@@ -249,7 +253,7 @@ config_parse_core(struct config *cfg, void *data)
 
     done = false;
     leaf = false;
-    new_pool = false;
+    new_section = false;
 
     switch (cfg->event.type) {
         case YAML_MAPPING_END_EVENT:
@@ -264,6 +268,7 @@ config_parse_core(struct config *cfg, void *data)
 
         case YAML_MAPPING_START_EVENT:
             cfg->depth++;
+            printf("yaml mapping start event\n");
             break;
 
         case YAML_SEQUENCE_START_EVENT:
@@ -271,24 +276,27 @@ config_parse_core(struct config *cfg, void *data)
             break;
 
         case YAML_SEQUENCE_END_EVENT:
-            printf("yaml sequence end event\n");
             cfg->seq = 0;
             break;
 
         case YAML_SCALAR_EVENT:
-            printf("yaml scalar event\n");
-            /*
+            scalar = cfg->event.data.scalar.value;
             if (cfg->seq) {
-                np_assert(cfg->depth == CONFIG_MAX_DEPTH);
-                leaf = true;
+                break;
+                //leaf = true;
+                /* TODO
+                 * list options not yet support.
+                 */
             }  else if (cfg->depth == CONFIG_ROOT_DEPTH) {
-                data = cfg->event.data.scalar.value;
-                printf(cfg->event.data.scalar.value);
+                new_section = true;
+                section = scalar;
+                printf("seq:%d depth:%d  section: %s\n",cfg->seq, cfg->depth, section);
+                /* new section */
                 
+            } else if (cfg->depth == CONFIG_MAX_DEPTH) {
+                /* evaluation section*/
+                printf("seq:%d depth:%d  data: %s\n",cfg->seq, cfg->depth, scalar);
             }
-            */
-            data = cfg->event.data.scalar.value;
-            printf("seq:%d depth:%d  data: %s\n",cfg->seq, cfg->depth, data);
             break;
         
         default:
