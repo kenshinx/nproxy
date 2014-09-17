@@ -64,6 +64,21 @@ _np_malloc(size_t size, const char *fname, int line)
     return ptr;
 }
 
+void *
+_np_realloc(void *ptr, size_t size, const char *fname, int line)
+{
+    void *p;
+    
+    p = realloc(ptr, size);
+    if (p == NULL) {
+        log_error("realloc(%zu) failed @ %s:%d", size, fname, line);
+    } else {
+        log_debug("realloc(%zu) failed at %p @ %s:%d", size, p, fname, line);
+    }
+    
+    return p;
+}
+
 
 void
 _np_free(void *ptr, const char *fname, int line)
