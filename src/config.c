@@ -13,10 +13,18 @@ config_server_init(void)
         return NULL;
     }
     
-    server->listen = NPROXY_DEFAULT_LISTEN;
+    server->listen = string_create(NPROXY_DEFAULT_LISTEN);
+    if (server->listen == NULL) {
+        return NULL;
+    }
+
+    server->pfile = string_null();
+    if (server->pfile = NULL) {
+        return NULL;
+    }
+
     server->port = NPROXY_DEFAULT_PORT; 
     server->daemon = NPROXY_DEFAULT_DAEMONIZE;
-    server->pfile = NULL;
     
     return server;
 }
@@ -30,9 +38,16 @@ config_log_init(void)
     if (log == NULL) {
         return NULL;
     }
+    
+    log->file = string_null();
+    if (log->file == NULL) {
+        return NULL;
+    }
 
-    log->file = NPROXY_DEFAULT_LOG_FILE;
-    log->level = NPROXY_DEFAULT_LOG_LEVEL;
+    log->level = string_create(NPROXY_DEFAULT_LOG_LEVEL);
+    if (log->level == NULL) {
+        return NULL;
+    }
     
     return log;
 }
@@ -47,10 +62,18 @@ config_redis_init(void)
         return NULL;
     }
     
-    redis->server = NPROXY_DEFAULT_REDIS_SERVER;
+    redis->server = string_create(NPROXY_DEFAULT_REDIS_SERVER);
+    if (redis->server == NULL) {
+        return NULL;
+    }
+
+    redis->password = string_null();
+    if (redis->password == NULL) {
+        return NULL;
+    }
+
     redis->port = NPROXY_DEFAULT_REDIS_PORT;
     redis->db = 0;
-    redis->password = NULL;
     
     return redis;
 }
@@ -96,7 +119,7 @@ config_init(char *filename)
         goto error;
     }
 
-    cfg->args = array_create(CONFIG_ARGS_LENGTH, sizeof(yaml_char *));
+    cfg->args = array_create(CONFIG_ARGS_LENGTH, sizeof(np_string));
     if (cfg->args == NULL) {
         goto error;
     }
@@ -106,16 +129,18 @@ config_init(char *filename)
         goto error;
     }
 
+    
     cfg->log = config_log_init();
     if (cfg->log == NULL) {
         goto error;
     }
+    
 
     cfg->redis = config_redis_init();
     if (cfg->redis == NULL) {
         goto error;
     }
-
+    
     cfg->fname = filename;
     cfg->fp = fp;
     
@@ -243,21 +268,20 @@ config_push_scalar(struct config *cfg)
 {
     np_status_t status;
     yaml_char *scalar;
-    uint32_t *scalar_len;
-    yaml_char *data;
+    yaml_len *scalar_len;
+    np_string *data;
 
     scalar = cfg->event.data.scalar.value;
-    scalar_len = (uint32_t)cfg->event.data.scalar.length;
-
-    data = np_malloc(scalar_len + 1);
+    scalar_len = (yaml_len)cfg->event.data.scalar.length;
+    
+    data = string_create(scalar);
     if (data == NULL) {
         return NP_ERROR;
     }
     
-    memcpy(data, scalar, scalar_len + 1);
-
     array_push(cfg->args, data);
-    log_warn("push '%s': '%d' , data: '%s'", scalar, scalar_len, data);
+
+    log_debug("push: '%s'", scalar);
 
     return NP_OK;
     
@@ -266,24 +290,82 @@ config_push_scalar(struct config *cfg)
 static void
 config_pop_scalar(struct config *cfg)
 {
-    void *value;
-    value = array_pop(cfg->args);
-    printf("free value %s\n", value);
-    np_free(value);
+    np_string *data;
+    data = array_pop(cfg->args);
+    log_debug("pop '%s'", data->data);
+    string_deinit(data);
+}
+
+
+static bool
+config_parse_bool(char *str)
+{
+    if (strcmp(str, "true") == 0) {
+        return true;
+    } else if (strcmp(str, "false") == 0) {
+        return false;
+    } else {
+        //what should be return?
+        return -1;
+    }
+}
+
+
+static np_status_t
+config_parse_mapping(struct config *cfg, np_string *section, np_string *key, np_string *value)
+{
+    if (strcmp(section->data, "server") == 0) {
+        if (strcmp(key->data, "listen") == 0) {
+            string_copy(cfg->server->listen, value);
+        } else if (strcmp(key->data, "port") == 0) {
+            cfg->server->port = (int)value->data;
+        } else if (strcmp(key->data, "daemon") == 0) {
+            cfg->server->daemon = config_parse_bool(value->data);
+        } else if (strcmp(key->data, "pfile")) {
+            string_copy(cfg->server->pfile, value);
+        }
+    } else if (strcmp(section->data, "log") == 0) {
+        if (strcmp(key->data, "file") == 0) {
+            string_copy(cfg->log->file, value);
+        } else if (strcmp(key->data, "level") == 0) {
+            string_copy(cfg->log->level, value);
+        }
+    } else if (strcmp(section->data, "redis") == 0) {
+        if (strcmp(key->data, "server") == 0) {
+            string_copy(cfg->redis->server, value);
+        } else if (strcmp(key->data, "port") == 0) {
+            cfg->redis->port = (int)value->data;
+        } else if (strcmp(key->data, "db") == 0) {
+            cfg->redis->db = (int)value->data;
+        } else if (strcmp(key->data, "password") == 0) {
+            string_copy(cfg->redis->password, value);
+        }
+    } else {
+        log_error("Unknown token '%s:%s'", key->data, value->data);
+        return NP_ERROR;
+    }
+
+    return NP_OK;
 }
 
 static np_status_t
-config_parse_mapping(struct config *cfg)
+config_parse_handler(struct config *cfg)
 {
-    yaml_char *section;
-    yaml_char *key;
-    yaml_char *value;
+    np_status_t status;
+    np_string *section;
+    np_string *key;
+    np_string *value;
     
     value = array_pop(cfg->args);
     key = array_pop(cfg->args);
     section = array_head(cfg->args);
 
-    printf("section: %s, %s: %s\n",section, key, value);
+    status = config_parse_mapping(cfg, section, key, value);
+    if (status != NC_OK) {
+        return status;
+    }
+
+    printf("section: %s, %s: %s\n",section->data, key->data, value->data);
 
     return NP_OK;
     
@@ -353,7 +435,7 @@ config_parse_core(struct config *cfg)
                     leaf = true;
                 }
                 /* evaluation section*/
-                log_warn("array_lenth:%d depth:%d  data: %s",
+                log_debug("array_lenth:%d depth:%d  data: %s",
                         cfg->args->nelts, cfg->depth, cfg->event.data.scalar.value);
             }
             break;
@@ -370,7 +452,7 @@ config_parse_core(struct config *cfg)
     }
 
     if (leaf) {
-        config_parse_mapping(cfg);
+        config_parse_handler(cfg);
     }
 
     return config_parse_core(cfg);

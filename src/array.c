@@ -55,8 +55,7 @@ array_push(np_array *array, void *data)
     }
 
     elt = (uint8_t *)array->elts + (array->size * array->nelts);
-    elt = data;
-    //np_memcpy(elt, data, array->size);
+    np_memcpy(elt, data, array->size);
     array->nelts++;
     
     return elt; 

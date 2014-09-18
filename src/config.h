@@ -9,6 +9,7 @@
 #include "util.h"
 #include "log.h"
 #include "array.h"
+#include "string.h"
 
 
 #define CONFIG_ROOT_DEPTH   1
@@ -16,24 +17,25 @@
 #define CONFIG_ARGS_LENGTH  4
 
 typedef uint8_t yaml_char;
+typedef uint32_t yaml_len;
 
 struct config_server {
-    char        *listen;
-    int         port;
-    unsigned    daemon:1;
-    char        *pfile;
+    np_string       *listen;
+    int             port;
+    unsigned        daemon:1;
+    np_string       *pfile;
 };
 
 struct config_log {
-    char    *file;
-    char    *level;
+    np_string       *file;
+    np_string       *level;
 };
 
 struct config_redis {
-    char    *server;
-    int     port;
-    int     db;
-    char    *password;
+    np_string       *server;
+    int             port;
+    int             db;
+    np_string       *password;
 };
 
 struct config {
@@ -43,7 +45,7 @@ struct config {
     struct config_log       *log;
     struct config_redis     *redis;
     int                     depth;
-    np_array         *args;
+    np_array                *args;
     yaml_parser_t           parser;
     yaml_event_t            event;
     yaml_token_t            token;
