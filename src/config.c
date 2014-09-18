@@ -262,7 +262,38 @@ config_begin_parse(struct config *cfg)
     return NP_OK; 
 }
 
+static np_status_t
+config_end_parse(struct config *cfg)
+{
+    np_status_t status;
+    bool done;
 
+    done = false;
+    do {
+        status = config_event_next(cfg);
+        if (status != NP_OK) {
+            return status;
+        }
+
+        switch (cfg->event.type) {
+        case YAML_STREAM_END_EVENT:
+            done = true;
+            break;
+
+        case YAML_DOCUMENT_END_EVENT:
+            break;
+
+        default:
+            NOT_REACHED();
+        }
+
+        config_event_done(cfg);
+    } while (!done);
+
+    config_yaml_destroy(cfg);
+
+    return NP_OK;
+}
 
 
 static np_status_t
@@ -366,6 +397,9 @@ config_parse_handler(struct config *cfg)
     if (status != NP_OK) {
         return status;
     }
+
+    //string_deinit(key);
+    //string_deinit(value);
 
     log_debug("section: %s, %s: %s\n",section->data, key->data, value->data);
 
@@ -487,6 +521,11 @@ config_parse(struct config *cfg)
     }
     
     status = config_parse_core(cfg);
+    if (status != NP_OK) {
+        return status;
+    }
+
+    status = config_end_parse(cfg);
     if (status != NP_OK) {
         return status;
     }
