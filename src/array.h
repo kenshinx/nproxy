@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include "util.h"
+#include "core.h"
 
 #define array_is_empty(array)                   \
     ((array->nelts) == 0)

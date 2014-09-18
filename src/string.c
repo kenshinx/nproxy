@@ -74,8 +74,14 @@ string_copy(np_string *dst, np_string *src)
     char *tmp;
     if (dst->data == NULL) {
         dst->data = np_malloc(src->len + 1);
+        if (dst->data == NULL) {
+            return NP_ERROR;
+        }
     } else {
-        dst->data = np_realloc(dst->data, scr->len + 1);
+        tmp = np_realloc(dst->data, src->len + 1);
+        if (tmp == NULL) {
+            return NP_ERROR;
+        }
     } 
     
     strcpy(dst->data, src->data);

@@ -263,6 +263,8 @@ config_begin_parse(struct config *cfg)
 }
 
 
+
+
 static np_status_t
 config_push_scalar(struct config *cfg)
 {
@@ -361,11 +363,11 @@ config_parse_handler(struct config *cfg)
     section = array_head(cfg->args);
 
     status = config_parse_mapping(cfg, section, key, value);
-    if (status != NC_OK) {
+    if (status != NP_OK) {
         return status;
     }
 
-    printf("section: %s, %s: %s\n",section->data, key->data, value->data);
+    log_debug("section: %s, %s: %s\n",section->data, key->data, value->data);
 
     return NP_OK;
     
@@ -377,8 +379,6 @@ config_parse_core(struct config *cfg)
     np_status_t status;
     bool done, leaf;
     yaml_char *section;
-    char *key;
-    void *value;
 
     status = config_event_next(cfg);
     if (status != NP_OK) {
@@ -458,6 +458,24 @@ config_parse_core(struct config *cfg)
     return config_parse_core(cfg);
 }
 
+
+void 
+config_dump(struct config *cfg)
+{
+    log_notice(
+        "[Nproxy Config]" CRLF
+        "" CRLF
+        "server"    CRLF
+        "   listen: %s" CRLF
+        "   port: %d" CRLF
+        "   daemon: %d" CRLF
+        "   pfile: %s" CRLF
+        "",
+        cfg->server->listen->data, cfg->server->port, 
+        cfg->server->daemon, cfg->server->pfile->data
+    );       
+}
+
 static np_status_t
 config_parse(struct config *cfg)
 {
@@ -473,6 +491,7 @@ config_parse(struct config *cfg)
         return status;
     }
 
+    config_dump(cfg);
     return NP_OK;
 }
 

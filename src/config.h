@@ -1,15 +1,11 @@
 #ifndef _NPROXY_CONFIG_H_
 #define _NPROXY_CONFIG_H_
 
-#include <stdio.h>
 #include <errno.h>
 #include <yaml.h>
 
 #include "nproxy.h"
-#include "util.h"
-#include "log.h"
-#include "array.h"
-#include "string.h"
+#include "core.h"
 
 
 #define CONFIG_ROOT_DEPTH   1

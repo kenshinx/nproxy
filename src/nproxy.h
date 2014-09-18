@@ -22,11 +22,6 @@
 #define NPROXY_DEFAULT_REDIS_SERVER     "127.0.0.1"
 #define NPROXY_DEFAULT_REDIS_PORT       6439
 
-#define CRLF                        "\r\n"
-#define NP_OK                       0
-#define NP_ERROR                    -1
-
-typedef int np_status_t;
 
 struct nproxy_server {
     char            *configfile;

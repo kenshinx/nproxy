@@ -1,7 +1,6 @@
 #ifndef _NPROXY_LOG_H_
 #define _NPROXY_LOG_H_
 
-#include <fcntl.h>
 #include <stdio.h>
 
 #define LOG_DEBUG       0
