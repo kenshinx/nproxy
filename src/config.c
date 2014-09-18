@@ -398,10 +398,10 @@ config_parse_handler(struct config *cfg)
         return status;
     }
 
+    printf("section: %s, %s: %s\n",section->data, key->data, value->data);
+    
     //string_deinit(key);
     //string_deinit(value);
-
-    log_debug("section: %s, %s: %s\n",section->data, key->data, value->data);
 
     return NP_OK;
     
@@ -483,6 +483,10 @@ config_parse_core(struct config *cfg)
 
     if (status != NP_OK) {
         return status; 
+    }
+
+    if (done) {
+        return NP_OK;
     }
 
     if (leaf) {
