@@ -8,10 +8,14 @@
 #include "nproxy.h"
 #include "util.h"
 #include "log.h"
+#include "array.h"
 
 
 #define CONFIG_ROOT_DEPTH   1
 #define CONFIG_MAX_DEPTH    CONFIG_ROOT_DEPTH + 1
+#define CONFIG_ARGS_LENGTH  4
+
+typedef uint8_t yaml_char;
 
 struct config_server {
     char        *listen;
@@ -39,6 +43,7 @@ struct config {
     struct config_log       *log;
     struct config_redis     *redis;
     int                     depth;
+    np_array         *args;
     yaml_parser_t           parser;
     yaml_event_t            event;
     yaml_token_t            token;

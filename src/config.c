@@ -58,15 +58,22 @@ config_redis_init(void)
 static void 
 config_destroy(struct config *cfg)
 {
+    if (cfg->args != NULL) {
+        array_destroy(cfg->args);
+    }
+
     if (cfg->server != NULL) {
         np_free(cfg->server);
     }
+    
     if (cfg->log != NULL) {
         np_free(cfg->log);
     }
+
     if (cfg->redis != NULL) {
         np_free(cfg->redis);
     }
+
     if (cfg != NULL) {
         np_free(cfg);
     }
@@ -76,9 +83,6 @@ static struct config *
 config_init(char *filename)
 {
     struct config *cfg;
-    struct config_server *cfg_server;
-    struct config_log *cfg_log;
-    struct config_redis *cfg_redis;
     FILE *fp;
     
     fp = fopen(filename, "r");
@@ -92,24 +96,25 @@ config_init(char *filename)
         goto error;
     }
 
-    cfg_server = config_server_init();
-    if (cfg_server == NULL) {
+    cfg->args = array_create(CONFIG_ARGS_LENGTH, sizeof(yaml_char *));
+    if (cfg->args == NULL) {
         goto error;
     }
-    cfg->server = cfg_server;
 
-    cfg_log = config_log_init();
-    if (cfg_log == NULL) {
+    cfg->server = config_server_init();
+    if (cfg->server == NULL) {
         goto error;
     }
-    cfg->log = cfg_log;
 
-
-    cfg_redis = config_redis_init();
-    if (cfg_redis == NULL) {
+    cfg->log = config_log_init();
+    if (cfg->log == NULL) {
         goto error;
     }
-    cfg->redis = cfg_redis;
+
+    cfg->redis = config_redis_init();
+    if (cfg->redis == NULL) {
+        goto error;
+    }
 
     cfg->fname = filename;
     cfg->fp = fp;
@@ -230,45 +235,90 @@ config_begin_parse(struct config *cfg)
     } while (!done);
 
     return NP_OK; 
+}
 
+
+static np_status_t
+config_push_scalar(struct config *cfg)
+{
+    np_status_t status;
+    yaml_char *scalar;
+    uint32_t *scalar_len;
+    yaml_char *data;
+
+    scalar = cfg->event.data.scalar.value;
+    scalar_len = (uint32_t)cfg->event.data.scalar.length;
+
+    data = np_malloc(scalar_len + 1);
+    if (data == NULL) {
+        return NP_ERROR;
+    }
+    
+    memcpy(data, scalar, scalar_len + 1);
+
+    array_push(cfg->args, data);
+    log_warn("push '%s': '%d' , data: '%s'", scalar, scalar_len, data);
+
+    return NP_OK;
+    
+}
+
+static void
+config_pop_scalar(struct config *cfg)
+{
+    void *value;
+    value = array_pop(cfg->args);
+    printf("free value %s\n", value);
+    np_free(value);
 }
 
 static np_status_t
-config_parse_core(struct config *cfg, void *data)
+config_parse_mapping(struct config *cfg)
+{
+    yaml_char *section;
+    yaml_char *key;
+    yaml_char *value;
+    
+    value = array_pop(cfg->args);
+    key = array_pop(cfg->args);
+    section = array_head(cfg->args);
+
+    printf("section: %s, %s: %s\n",section, key, value);
+
+    return NP_OK;
+    
+}
+
+static np_status_t
+config_parse_core(struct config *cfg)
 {
     np_status_t status;
-    bool done, leaf, new_section;
-    char *section;
+    bool done, leaf;
+    yaml_char *section;
     char *key;
     void *value;
-    void *scalar;
 
     status = config_event_next(cfg);
     if (status != NP_OK) {
         return status;
     }
 
-    log_debug("next event %d depth %d seq %d", 
-                cfg->event.type, cfg->depth, cfg->seq);
-
     done = false;
     leaf = false;
-    new_section = false;
 
     switch (cfg->event.type) {
         case YAML_MAPPING_END_EVENT:
             cfg->depth--;
             if (cfg->depth == 1) {
-                //config_pop_scalar(cfg);
-                printf("yaml mapping end event\n");
+                config_pop_scalar(cfg);
             } else if (cfg->depth == 0) {
                 done = true;
             }
             break;
 
         case YAML_MAPPING_START_EVENT:
+            /*new section start*/
             cfg->depth++;
-            printf("yaml mapping start event\n");
             break;
 
         case YAML_SEQUENCE_START_EVENT:
@@ -280,22 +330,31 @@ config_parse_core(struct config *cfg, void *data)
             break;
 
         case YAML_SCALAR_EVENT:
-            scalar = cfg->event.data.scalar.value;
+
             if (cfg->seq) {
-                break;
-                //leaf = true;
                 /* TODO
                  * list options not yet support.
                  */
-            }  else if (cfg->depth == CONFIG_ROOT_DEPTH) {
-                new_section = true;
-                section = scalar;
-                printf("seq:%d depth:%d  section: %s\n",cfg->seq, cfg->depth, section);
+                break;
+            }  
+
+            status = config_push_scalar(cfg);
+                if (status != NP_OK) {
+                break;
+            }
+            
+            if (cfg->depth == CONFIG_ROOT_DEPTH) {
                 /* new section */
+                section = cfg->event.data.scalar.value;
+                //printf("section: %s\n", section);
                 
             } else if (cfg->depth == CONFIG_MAX_DEPTH) {
+                if (cfg->args->nelts == cfg->depth + 1) {
+                    leaf = true;
+                }
                 /* evaluation section*/
-                printf("seq:%d depth:%d  data: %s\n",cfg->seq, cfg->depth, scalar);
+                log_warn("array_lenth:%d depth:%d  data: %s",
+                        cfg->args->nelts, cfg->depth, cfg->event.data.scalar.value);
             }
             break;
         
@@ -306,9 +365,15 @@ config_parse_core(struct config *cfg, void *data)
 
     config_event_done(cfg);
 
-    return config_parse_core(cfg, data);
+    if (status != NP_OK) {
+        return status; 
+    }
 
-    
+    if (leaf) {
+        config_parse_mapping(cfg);
+    }
+
+    return config_parse_core(cfg);
 }
 
 static np_status_t
@@ -321,7 +386,7 @@ config_parse(struct config *cfg)
         return status;
     }
     
-    status = config_parse_core(cfg, NULL);
+    status = config_parse_core(cfg);
     if (status != NP_OK) {
         return status;
     }

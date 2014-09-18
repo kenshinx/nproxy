@@ -16,7 +16,7 @@ array_create(uint32_t n, size_t size)
     array->elts = np_malloc(n * size);
     if (array->elts == NULL) {
         return NULL;
-    }
+    } 
 
     array->nelts = 0;
     array->size = size;
@@ -42,7 +42,6 @@ array_push(np_array *array, void *data)
     void *elt, *new;
     size_t size;
 
-    np_assert(sizeof(*data) == array->size);
 
     if (array_is_full(array)) {
         size = array->size * array->nalloc;
@@ -55,11 +54,12 @@ array_push(np_array *array, void *data)
         array->nalloc *= 2;
     }
 
-    elem = array->elts + (array->size * array->nelts);
-    np_memcpy(elem, data, array->size);
+    elt = (uint8_t *)array->elts + (array->size * array->nelts);
+    elt = data;
+    //np_memcpy(elt, data, array->size);
     array->nelts++;
     
-    return elem; 
+    return elt; 
 }
 
 
@@ -71,8 +71,8 @@ array_pop(np_array *array)
         return NULL;
     }
     
-    array->nelts=--;
-    elt = array->elts + (array->size * array->nelts);
+    array->nelts--;
+    elt = (uint8_t *)array->elts + (array->size * array->nelts);
     
     return elt;
 }
@@ -89,7 +89,7 @@ array_get(np_array *array, uint32_t idx)
         return NULL;
     }
 
-    elt = array->elts + (array->size * idx);
+    elt = (uint8_t *)array->elts + (array->size * idx);
 
     return elt;
     
@@ -101,7 +101,7 @@ array_head(np_array *array)
 {
     void *elt;
 
-    if (array_is_empty) {
+    if (array_is_empty(array)) {
         return NULL;
     }
 

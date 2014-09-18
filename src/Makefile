@@ -30,10 +30,10 @@ NPROXY_BIN=nproxy
 NPROXY_OBJ=nproxy.o config.o util.o log.o array.o
 
 nproxy.o: nproxy.c nproxy.h config.h config.c util.h log.h
-config.o: config.c config.h util.h nproxy.h ../contrib/$(LIBYAML)/include/yaml.h
+config.o: config.c config.h util.h nproxy.h array.h ../contrib/$(LIBYAML)/include/yaml.h
 log.o: log.c log.h
 util.o: util.c util.h
-array.o: array.h array.o
+array.o: array.c array.h
 
 $(NPROXY_BIN): $(NPROXY_OBJ)
 	$(NPROXY_LD) -o $@ $^ $(FINAL_LIBS) ../contrib/$(LIBYAML)/src/.libs/libyaml.a 

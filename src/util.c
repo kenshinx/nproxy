@@ -57,8 +57,6 @@ _np_malloc(size_t size, const char *fname, int line)
     ptr = malloc(size);
     if (ptr == NULL) {
         log_error("malloc(%zu) failed at %p @ %s:%d", size, ptr, fname, line);
-    } else {
-        log_debug("malloc(%zu) at %p @ %s:%d", size, ptr, fname, line);
     }
 
     return ptr;
@@ -72,8 +70,6 @@ _np_realloc(void *ptr, size_t size, const char *fname, int line)
     p = realloc(ptr, size);
     if (p == NULL) {
         log_error("realloc(%zu) failed @ %s:%d", size, fname, line);
-    } else {
-        log_debug("realloc(%zu) failed at %p @ %s:%d", size, p, fname, line);
     }
     
     return p;

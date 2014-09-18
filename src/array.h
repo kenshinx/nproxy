@@ -1,15 +1,19 @@
 #ifndef _NPROXY_ARRAY_H_
 #define _NPROXY_ARRAY_H_
 
-#include "nproxy.h"
+#include <stdio.h>
+#include <stdint.h>
+#include <sys/types.h>
+
+#include "util.h"
 
 #define array_is_empty(array)                   \
-    ((array->netls) == 0)
+    ((array->nelts) == 0)
 
 #define array_is_full(array)                    \
-    ((array->netls) == (array->nalloc))
+    ((array->nelts) == (array->nalloc))
 
-typedef struct np_array {
+typedef struct np_array_s {
     void        *elts;
     uint32_t    nelts;
     uint32_t    nalloc;
