@@ -5,7 +5,7 @@
 
 static struct config_server *
 config_server_init(void)
-{
+{ 
     struct config_server *server;
 
     server = np_malloc(sizeof(*server));
@@ -19,7 +19,7 @@ config_server_init(void)
     }
 
     server->pfile = string_null();
-    if (server->pfile = NULL) {
+    if (server->pfile == NULL) {
         return NULL;
     }
 
@@ -129,7 +129,6 @@ config_init(char *filename)
         goto error;
     }
 
-    
     cfg->log = config_log_init();
     if (cfg->log == NULL) {
         goto error;
@@ -351,10 +350,10 @@ config_parse_mapping(struct config *cfg, np_string *section, np_string *key, np_
         if (strcmp(key->data, "listen") == 0) {
             string_copy(cfg->server->listen, value);
         } else if (strcmp(key->data, "port") == 0) {
-            cfg->server->port = (int)value->data;
+            cfg->server->port = atoi(value->data);
         } else if (strcmp(key->data, "daemon") == 0) {
             cfg->server->daemon = config_parse_bool(value->data);
-        } else if (strcmp(key->data, "pfile")) {
+        } else if (strcmp(key->data, "pfile") == 0) {
             string_copy(cfg->server->pfile, value);
         }
     } else if (strcmp(section->data, "log") == 0) {
@@ -367,9 +366,9 @@ config_parse_mapping(struct config *cfg, np_string *section, np_string *key, np_
         if (strcmp(key->data, "server") == 0) {
             string_copy(cfg->redis->server, value);
         } else if (strcmp(key->data, "port") == 0) {
-            cfg->redis->port = (int)value->data;
+            cfg->redis->port = atoi(value->data);
         } else if (strcmp(key->data, "db") == 0) {
-            cfg->redis->db = (int)value->data;
+            cfg->redis->db = atoi(value->data);
         } else if (strcmp(key->data, "password") == 0) {
             string_copy(cfg->redis->password, value);
         }
@@ -398,7 +397,7 @@ config_parse_handler(struct config *cfg)
         return status;
     }
 
-    printf("section: %s, %s: %s\n",section->data, key->data, value->data);
+    log_debug("section: %s, %s: %s\n",section->data, key->data, value->data);
     
     //string_deinit(key);
     //string_deinit(value);
@@ -500,7 +499,8 @@ config_parse_core(struct config *cfg)
 void 
 config_dump(struct config *cfg)
 {
-    log_notice(
+    log_stdout(
+            
         "[Nproxy Config]" CRLF
         "" CRLF
         "server"    CRLF
@@ -511,7 +511,9 @@ config_dump(struct config *cfg)
         "",
         cfg->server->listen->data, cfg->server->port, 
         cfg->server->daemon, cfg->server->pfile->data
-    );       
+    );
+    
+
 }
 
 static np_status_t

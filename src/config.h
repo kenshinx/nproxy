@@ -52,5 +52,6 @@ struct config {
 };
 
 struct config *config_creat(char *filename);
+void config_dump(struct config *cfg);
 
 #endif
