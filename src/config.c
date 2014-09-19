@@ -33,6 +33,7 @@ static struct config_log *
 config_log_init(void)
 {
     struct config_log *log;
+    char default_level[2];
 
     log = np_malloc(sizeof(*log));
     if (log == NULL) {
@@ -44,7 +45,8 @@ config_log_init(void)
         return NULL;
     }
 
-    log->level = string_create(NPROXY_DEFAULT_LOG_LEVEL);
+    sprintf(default_level, "%d", NPROXY_DEFAULT_LOG_LEVEL);
+    log->level = string_create(default_level);
     if (log->level == NULL) {
         return NULL;
     }
@@ -499,20 +501,24 @@ config_parse_core(struct config *cfg)
 void 
 config_dump(struct config *cfg)
 {
-    log_stdout(
-            
-        "[Nproxy Config]" CRLF
-        "" CRLF
-        "server"    CRLF
-        "   listen: %s" CRLF
-        "   port: %d" CRLF
-        "   daemon: %d" CRLF
-        "   pfile: %s" CRLF
-        "",
-        cfg->server->listen->data, cfg->server->port, 
-        cfg->server->daemon, cfg->server->pfile->data
-    );
+
+    log_notice("[Nproxy Config]");
     
+    log_notice("server");
+    log_notice("\t listen: %s", cfg->server->listen->data);
+    log_notice("\t port: %d", cfg->server->port);
+    log_notice("\t daemon: %d", cfg->server->daemon);
+    log_notice("\t pfile: %s", cfg->server->pfile->data);
+
+    log_notice("log");
+    log_notice("\t file: %s", cfg->log->file->data);
+    log_notice("\t level: %s", cfg->log->level->data);
+
+    log_notice("redis");
+    log_notice("\t server: %s", cfg->redis->server->data);
+    log_notice("\t port: %d", cfg->redis->port);
+    log_notice("\t db: %d", cfg->redis->db);
+    log_notice("\t password: %s", cfg->redis->password->data);
 
 }
 
