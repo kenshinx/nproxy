@@ -86,7 +86,7 @@ np_load_server_config(struct nproxy_server *server)
         return NP_ERROR;
     }
     server->cfg = cfg;
-    log_debug("load config '%s' sucess", server->configfile);
+    log_info("load config '%s' sucess", server->configfile);
     return NP_OK;
     
 }
@@ -114,7 +114,7 @@ np_setup_server(struct nproxy_server *server)
     if (status != NP_OK) {
         log_stderr("load config '%s' failed", server->configfile);
         return status;
-    }      
+    }    
 
     return NP_OK;
 }

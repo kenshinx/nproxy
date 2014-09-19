@@ -29,6 +29,14 @@ config_server_init(void)
     return server;
 }
 
+static void 
+config_server_deinit(struct config_server *server)
+{
+    string_deinit(server->listen);
+    string_deinit(server->pfile);
+    np_free(server);
+}
+
 static struct config_log *
 config_log_init(void)
 {
@@ -52,6 +60,15 @@ config_log_init(void)
     }
     
     return log;
+}
+
+
+static void
+config_log_deinit(struct config_log *log)
+{
+    string_deinit(log->file);
+    string_deinit(log->level);
+    np_free(log);
 }
 
 static struct config_redis *
@@ -80,6 +97,14 @@ config_redis_init(void)
     return redis;
 }
 
+static void
+config_redis_deinit(struct config_redis *redis)
+{
+    string_deinit(redis->server);
+    string_deinit(redis->password);
+    np_free(redis);
+}
+
 static void 
 config_destroy(struct config *cfg)
 {
@@ -88,15 +113,15 @@ config_destroy(struct config *cfg)
     }
 
     if (cfg->server != NULL) {
-        np_free(cfg->server);
+        config_server_deinit(cfg->server);
     }
     
     if (cfg->log != NULL) {
-        np_free(cfg->log);
+        config_log_deinit(cfg->log);
     }
 
     if (cfg->redis != NULL) {
-        np_free(cfg->redis);
+        config_redis_deinit(cfg->redis);
     }
 
     if (cfg != NULL) {
@@ -401,8 +426,8 @@ config_parse_handler(struct config *cfg)
 
     log_debug("section: %s, %s: %s\n",section->data, key->data, value->data);
     
-    //string_deinit(key);
-    //string_deinit(value);
+    string_deinit(key);
+    string_deinit(value);
 
     return NP_OK;
     
