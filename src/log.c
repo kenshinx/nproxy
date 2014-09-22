@@ -123,7 +123,8 @@ _log_stream(FILE *stream, const char *fmt, ...)
     fprintf(stream, "%s\n", msg);
 }
 
-/*
+#ifdef LOG_TEST_MAIN
+
 int
 main()
 {
@@ -131,4 +132,6 @@ main()
     log_debug("This is debug message: from %s", "ken");
     exit(1); 
 }
-*/
+
+#endif
+
