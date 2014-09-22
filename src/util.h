@@ -1,6 +1,8 @@
 #ifndef _NPROXY_UTIL_H_
 #define _NPROXY_UTIL_H_
 
+#include <string.h>
+
 #define np_malloc(size)                                 \
     _np_malloc((size_t)(size), __FILE__, __LINE__)      
 
@@ -24,7 +26,7 @@
 
 char *np_get_current_path(void);
 char *np_get_absolute_path(char *filename);
-int string_array_length(char *arr[]);
+int string_array_length(const char *arr[]);
 void *_np_malloc(size_t size, const char *fname, int line);
 void *_np_realloc(void *ptr, size_t size, const char *fname, int line);
 void _np_free(void *ptr, const char *fname, int line);

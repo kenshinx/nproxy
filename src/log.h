@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#include "util.h"
+
 #define LOG_DEBUG       0
 #define LOG_VERBOSE     1
 #define LOG_INFO        2
@@ -47,7 +49,7 @@
 } while (0)                                              \
 
 struct logger {
-    char *name;
+    const char *name;
     int level;
     FILE *fd;
 };

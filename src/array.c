@@ -98,8 +98,6 @@ array_get(np_array *array, uint32_t idx)
 void *
 array_head(np_array *array)
 {
-    void *elt;
-
     if (array_is_empty(array)) {
         return NULL;
     }

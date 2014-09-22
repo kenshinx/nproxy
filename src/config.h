@@ -39,7 +39,7 @@ struct config {
     struct config_server    *server;
     struct config_log       *log;
     struct config_redis     *redis;
-    int                     depth;
+    uint32_t                depth;
     np_array                *args;
     yaml_parser_t           parser;
     yaml_event_t            event;

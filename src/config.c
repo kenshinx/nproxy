@@ -190,7 +190,6 @@ error:
 static np_status_t
 config_yaml_init(struct config *cfg)
 {
-    np_status_t status;
     int rv;
     
     rv = fseek(cfg->fp, 0L, SEEK_SET);
@@ -325,15 +324,14 @@ config_end_parse(struct config *cfg)
 static np_status_t
 config_push_scalar(struct config *cfg)
 {
-    np_status_t status;
     yaml_char *scalar;
-    yaml_len *scalar_len;
+    yaml_len scalar_len;
     np_string *data;
 
     scalar = cfg->event.data.scalar.value;
-    scalar_len = (yaml_len)cfg->event.data.scalar.length;
+    scalar_len = cfg->event.data.scalar.length;
     
-    data = string_create(scalar);
+    data = string_create((char *)scalar);
     if (data == NULL) {
         return NP_ERROR;
     }

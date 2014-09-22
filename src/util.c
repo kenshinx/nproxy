@@ -39,7 +39,7 @@ np_get_absolute_path(char *filename)
 }
 
 int 
-string_array_length(char *arr[])
+string_array_length(const char *arr[])
 {
     int count = 0;
     while (arr[count] != NULL) {
