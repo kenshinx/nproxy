@@ -52,7 +52,7 @@ struct logger {
     FILE *fd;
 };
 
-int log_init(int level, char *name);
+int log_init(int level, const char *name);
 void log_destory(void);
 void log_set_level(int level);
 char *log_level_to_text(int level);

@@ -18,9 +18,13 @@ typedef struct np_string {
 
 
 np_string *string_create(const char *data);
+
 np_string *string_null(void);
+
 void string_destroy(np_string *str);
+
 bool string_compare(np_string *str1, np_string *str2);
+
 int string_copy(np_string *dst, np_string *src);
 
 

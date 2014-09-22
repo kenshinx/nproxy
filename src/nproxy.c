@@ -2,7 +2,6 @@
 #include <unistd.h>
 
 #include "nproxy.h"
-#include "log.h"
 
 
 static void
@@ -130,7 +129,7 @@ np_print_run(struct nproxy_server *server)
 static void 
 np_run(struct nproxy_server *server)
 {
-    printf("");
+    printf("running\n");
 }
 
 

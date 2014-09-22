@@ -13,7 +13,7 @@
 static struct logger logger;
 
 int
-log_init(int level, char *name)
+log_init(int level,const char *name)
 {
     struct logger *l = &logger;
     l->level = level;
@@ -64,12 +64,12 @@ log_level_to_text(int level)
                                    "WARN", 
                                    "ERROR", 
                                    "CRITICAL"};
-    /*
+    
     max_level = string_array_length(log_level_map);
     if (level >= max_level) {
         return NULL;
     }
-    */
+    
     temp = log_level_map[level];
     level_text = malloc(strlen(temp) + 1);
     if (level_text == NULL) {

@@ -7,9 +7,9 @@
 #include <fcntl.h>
 #include <sys/types.h>
 
+#include "util.h"
 #include "string.h"
 #include "array.h"
-#include "util.h"
 #include "log.h"
 
 #define CRLF                        "\r\n"

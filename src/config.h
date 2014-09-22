@@ -7,7 +7,6 @@
 #include "nproxy.h"
 #include "core.h"
 
-
 #define CONFIG_ROOT_DEPTH   1
 #define CONFIG_MAX_DEPTH    CONFIG_ROOT_DEPTH + 1
 #define CONFIG_ARGS_LENGTH  4

@@ -32,3 +32,5 @@
 *.swp
 
 /tags
+/nproxy.sublime-project
+/nproxy.sublime-workspace

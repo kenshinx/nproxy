@@ -7,10 +7,10 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-#include "log.h"
+
+#include "core.h"
 #include "config.h"
-#include "util.h"
-#include "array.h"
+
 
 #define NPROXY_VERSION                  "0.1.1"
 #define NPROXY_DEFAULT_CONFIG_FILE      "conf/nproxy.yml"
