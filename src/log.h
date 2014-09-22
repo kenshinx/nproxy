@@ -57,7 +57,7 @@ struct logger {
 int log_init(int level, const char *name);
 void log_destory(void);
 void log_set_level(int level);
-char *log_level_to_text(int level);
+void log_level_to_text(int level, char *text);
 void _log(int level, const char *file, int line, const char *fmt, ...);
 void _log_stream(FILE *stream, const char *fmt, ...);
 

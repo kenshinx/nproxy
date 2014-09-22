@@ -51,10 +51,9 @@ log_set_level(int level)
     l->level = level;
 }
 
-char *
-log_level_to_text(int level)
+void
+log_level_to_text(int level, char *text)
 {
-    char *level_text;
     int max_level;
     const char *log_level_map[] = {"DEBUG",
                                    "VERBOSE", 
@@ -66,16 +65,11 @@ log_level_to_text(int level)
     
     max_level = string_array_length(log_level_map);
     if (level >= max_level) {
-        return NULL;
+        return;
     }
     
     const char *temp = log_level_map[level];
-    level_text = malloc(strlen(temp) + 1);
-    if (level_text == NULL) {
-        return NULL;
-    }
-    strcpy(level_text, temp);
-    return level_text;
+    strcpy(text, temp);
 }
 
 
@@ -87,7 +81,7 @@ _log(int level, const char *file, int line, const char *fmt, ...)
     char msg[LOG_MAX_LENGTH];
     int off;
     char buf[64];
-    char *level_text;
+    char level_text[15];
 
     if (level < l->level) {
         return;
@@ -102,11 +96,10 @@ _log(int level, const char *file, int line, const char *fmt, ...)
     off = strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S.", localtime(&tv.tv_sec));
     //snprintf(buf+off,sizeof(buf)-off,"%03d",(int)tv.tv_usec/1000);
 
-    level_text = log_level_to_text(level);
+    log_level_to_text(level, level_text);
     fprintf(l->fd, "%d [%s] %s:%d (%s): %s\n", 
             (int)getpid(), buf, file, line, level_text, msg);
     fflush(l->fd);
-    np_free(level_text);
 }
 
 
