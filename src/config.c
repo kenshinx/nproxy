@@ -380,12 +380,18 @@ config_parse_mapping(struct config *cfg, np_string *section, np_string *key, np_
             cfg->server->daemon = config_parse_bool(value->data);
         } else if (strcmp(key->data, "pfile") == 0) {
             string_copy(cfg->server->pfile, value);
+        } else {
+            log_error("Unknow token: '%s: %s' in [server]", key->data, value->data);
+            return NP_ERROR;
         }
     } else if (strcmp(section->data, "log") == 0) {
         if (strcmp(key->data, "file") == 0) {
             string_copy(cfg->log->file, value);
         } else if (strcmp(key->data, "level") == 0) {
             string_copy(cfg->log->level, value);
+        } else {
+            log_error("Unknow token: '%s: %s' in [log]", key->data, value->data);
+            return NP_ERROR;
         }
     } else if (strcmp(section->data, "redis") == 0) {
         if (strcmp(key->data, "server") == 0) {
@@ -396,9 +402,12 @@ config_parse_mapping(struct config *cfg, np_string *section, np_string *key, np_
             cfg->redis->db = atoi(value->data);
         } else if (strcmp(key->data, "password") == 0) {
             string_copy(cfg->redis->password, value);
+        } else {
+            log_error("Unknow token: '%s: %s' in [redis]", key->data, value->data);
+            return NP_ERROR;
         }
     } else {
-        log_error("Unknown token '%s:%s'", key->data, value->data);
+        log_error("Unknown section '%s'", section->data);
         return NP_ERROR;
     }
 
@@ -505,16 +514,16 @@ config_parse_core(struct config *cfg)
 
     config_event_done(cfg);
 
-    if (status != NP_OK) {
-        return status; 
-    }
-
     if (done) {
         return NP_OK;
     }
 
     if (leaf) {
-        config_parse_handler(cfg);
+        status = config_parse_handler(cfg);
+    }
+
+    if (status != NP_OK) {
+        return status; 
     }
 
     return config_parse_core(cfg);
