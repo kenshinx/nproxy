@@ -45,8 +45,8 @@ string_destroy(np_string *str)
 bool
 string_compare(np_string *str1, np_string *str2)
 {
-    np_assert(str1 != NULL)
-    np_assert(str2 != NULL)
+    np_assert(str1 != NULL);
+    np_assert(str2 != NULL);
 
     if (str1->len != str2->len) {
         return false;

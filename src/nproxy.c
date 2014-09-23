@@ -154,6 +154,12 @@ static void
 np_run(struct nproxy_server *server)
 {
     redisContext *c = redisConnect(server->cfg->redis->server->data, server->cfg->redis->port);
+    if (c != NULL && c->err) {
+        log_error("connect redis failed on %s:%d\n", 
+                server->cfg->redis->server->data, server->cfg->redis->port);
+        return;
+    }
+    log_debug("connect redis %s:%d\n", server->cfg->redis->server->data, server->cfg->redis->port);
     
 }
 
