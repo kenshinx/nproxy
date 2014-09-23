@@ -1,8 +1,9 @@
 
 OS := $(shell sh -c 'uname -s 2>/dev/null || echo unknow')
 ROOT := $(shell sh -c 'cd .. ; pwd')
-DEPENDENCY_TARGETS=libyaml
+DEPENDENCY_TARGETS=libyaml hiredis
 LIBYAML=yaml-0.1.5
+HIREDIS=hiredis-0.11.0
 
 
 STD=-STD=C99 -pendantic
@@ -20,6 +21,7 @@ FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS)
 FINAL_LDFLAGS=$(LDFLAGS) $(DEBUG)
 FINAL_LIBS=-lm
 FINAL_CFLAGS+= -I../contrib/$(LIBYAML)/include
+FINAL_CFLAGS+= -I../contrib/$(HIREDIS)
 
 CC?=gcc
 
@@ -29,7 +31,7 @@ NPROXY_LD=$(CC) $(FINAL_LDFLAGS)
 NPROXY_BIN=nproxy
 NPROXY_OBJ=nproxy.o config.o util.o log.o array.o string.o
 
-nproxy.o: nproxy.c nproxy.h core.h config.h
+nproxy.o: nproxy.c nproxy.h core.h config.h ../contrib/$(HIREDIS)/hiredis.h
 config.o: config.c config.h core.h ../contrib/$(LIBYAML)/include/yaml.h
 log.o: log.c log.h util.h 
 util.o: util.c util.h 
@@ -37,7 +39,7 @@ array.o: array.c array.h core.h
 string.o: string.c string.h core.h
 
 $(NPROXY_BIN): $(NPROXY_OBJ)
-	$(NPROXY_LD) -o $@ $^ $(FINAL_LIBS) ../contrib/$(LIBYAML)/src/.libs/libyaml.a 
+	$(NPROXY_LD) -o $@ $^ $(FINAL_LIBS) ../contrib/$(LIBYAML)/src/.libs/libyaml.a ../contrib/$(HIREDIS)/libhiredis.a 
 
 PREPARE=make-contrib
 
@@ -46,9 +48,9 @@ make-contrib:
 
 .PHONY: make-contrib
 
-all: $(NPROXY_BIN)
+#all: $(NPROXY_BIN)
 
-#all: $(PREPARE) $(NPROXY_BIN)
+all: $(PREPARE) $(NPROXY_BIN)
 
 .PHONY: all
 

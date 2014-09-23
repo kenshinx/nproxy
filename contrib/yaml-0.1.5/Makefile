@@ -145,7 +145,7 @@ AUTOMAKE = ${SHELL} /Users/kenshin/workspace/nproxy/contrib/yaml-0.1.5/config/mi
 AWK = awk
 CC = gcc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g -O2
+CFLAGS = -arch x86_64
 CPP = gcc -E
 CPPFLAGS = 
 CYGPATH_W = echo

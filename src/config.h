@@ -2,6 +2,11 @@
 #define _NPROXY_CONFIG_H_
 
 #include <yaml.h>
+#include <stdint.h>
+#include <sys/types.h>
+
+#include "string.h"
+#include "array.h"
 
 #define CONFIG_ROOT_DEPTH   1
 #define CONFIG_MAX_DEPTH    CONFIG_ROOT_DEPTH + 1

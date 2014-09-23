@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
+#include <hiredis.h>
+
 #include "core.h"
 #include "config.h"
 #include "nproxy.h"
@@ -151,8 +153,8 @@ np_print_run(struct nproxy_server *server)
 static void 
 np_run(struct nproxy_server *server)
 {
-    //redisContext *c = redisConnect(server->cfg->redis->server, server-cfg->redis->port);
-    printf("running\n");
+    redisContext *c = redisConnect(server->cfg->redis->server->data, server->cfg->redis->port);
+    
 }
 
 
