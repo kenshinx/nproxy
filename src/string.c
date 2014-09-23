@@ -45,6 +45,9 @@ string_destroy(np_string *str)
 bool
 string_compare(np_string *str1, np_string *str2)
 {
+    np_assert(str1 != NULL)
+    np_assert(str2 != NULL)
+
     if (str1->len != str2->len) {
         return false;
     }
@@ -76,20 +79,13 @@ string_null(void)
 np_status_t
 string_copy(np_string *dst, np_string *src)
 {
-    char *tmp;
+    dst->data = np_realloc(dst->data, src->len + 1);
     if (dst->data == NULL) {
-        dst->data = np_malloc(src->len + 1);
-        if (dst->data == NULL) {
-            return NP_ERROR;
-        }
-    } else {
-        tmp = np_realloc(dst->data, src->len + 1);
-        if (tmp == NULL) {
-            return NP_ERROR;
-        }
-    } 
+        return NP_ERROR;
+    }
     
-    strcpy(dst->data, src->data);
+    memcpy(dst->data, src->data, src->len);
+    dst->data[src->len] = '\0';
     dst->len = src->len;
 
     return NP_OK;
