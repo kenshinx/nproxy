@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <errno.h>
+#include <yaml.h>
+
+#include "nproxy.h"
+#include "core.h"
 #include "config.h"
 
 static struct config_server *

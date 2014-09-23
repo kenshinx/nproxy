@@ -1,12 +1,6 @@
 #ifndef _NPROXY_ARRAY_H_
 #define _NPROXY_ARRAY_H_
 
-#include <stdio.h>
-#include <stdint.h>
-#include <sys/types.h>
-
-#include "core.h"
-
 #define array_is_empty(array)                   \
     ((array->nelts) == 0)
 

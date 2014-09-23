@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-#include "util.h"
 
 #define LOG_DEBUG       0
 #define LOG_VERBOSE     1

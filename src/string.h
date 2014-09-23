@@ -1,9 +1,6 @@
 #ifndef _NPROXY_STRING_H_
 #define _NPROXY_STRING_H_
 
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
 #include <stdbool.h>
 #include <sys/types.h>
 

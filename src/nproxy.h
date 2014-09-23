@@ -2,15 +2,6 @@
 #define _DPROXY_H_
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <sys/types.h>
-
-
-#include "core.h"
-#include "config.h"
-
 
 #define NPROXY_VERSION                  "0.1.1"
 #define NPROXY_DEFAULT_CONFIG_FILE      "conf/nproxy.yml"

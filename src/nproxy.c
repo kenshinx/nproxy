@@ -1,6 +1,13 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <sys/types.h>
+
+#include "core.h"
+#include "config.h"
 #include "nproxy.h"
 
 
@@ -99,6 +106,13 @@ np_init_log(struct nproxy_server *server)
 }
 
 static np_status_t
+np_reinit_log(struct nproxy_server *server)
+{
+    /* reinit log with configuration load from config file */
+    return np_init_log(server);
+}
+
+static np_status_t
 np_setup_server(struct nproxy_server *server)
 {
     np_status_t status;
@@ -115,6 +129,14 @@ np_setup_server(struct nproxy_server *server)
         return status;
     }    
 
+    status = np_reinit_log(server);
+    if (status != NP_OK) {
+        log_stderr("reinit log failed");
+        return status;
+    }
+
+
+
     return NP_OK;
 }
 
@@ -129,6 +151,7 @@ np_print_run(struct nproxy_server *server)
 static void 
 np_run(struct nproxy_server *server)
 {
+    //redisContext *c = redisConnect(server->cfg->redis->server, server-cfg->redis->port);
     printf("running\n");
 }
 

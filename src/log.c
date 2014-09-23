@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/time.h>
 
+#include "util.h"
 #include "log.h"
 
 static struct logger logger;

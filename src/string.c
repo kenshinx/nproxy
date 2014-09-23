@@ -1,6 +1,11 @@
 
 #include <stdio.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <sys/types.h>
 
+#include "core.h"
 #include "string.h"
 
 np_string *

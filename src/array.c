@@ -1,6 +1,9 @@
 
 #include <stdio.h>
+#include <stdint.h>
+#include <sys/types.h>
 
+#include "core.h"
 #include "array.h"
 
 np_array *

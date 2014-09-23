@@ -1,11 +1,7 @@
 #ifndef _NPROXY_CONFIG_H_
 #define _NPROXY_CONFIG_H_
 
-#include <errno.h>
 #include <yaml.h>
-
-#include "nproxy.h"
-#include "core.h"
 
 #define CONFIG_ROOT_DEPTH   1
 #define CONFIG_MAX_DEPTH    CONFIG_ROOT_DEPTH + 1
