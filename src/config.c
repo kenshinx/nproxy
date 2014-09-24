@@ -28,6 +28,11 @@ config_server_init(void)
         return NULL;
     }
 
+    server->redis_key = string_null();
+    if (server->redis_key == NULL) {
+        return NULL;
+    }
+
     server->port = NPROXY_DEFAULT_PORT; 
     server->daemon = NPROXY_DEFAULT_DAEMONIZE;
     
@@ -39,6 +44,7 @@ config_server_deinit(struct config_server *server)
 {
     string_deinit(server->listen);
     string_deinit(server->pfile);
+    string_deinit(server->redis_key);
     np_free(server);
 }
 
@@ -98,7 +104,8 @@ config_redis_init(void)
 
     redis->port = NPROXY_DEFAULT_REDIS_PORT;
     redis->db = 0;
-    
+    redis->timeout = 5;
+
     return redis;
 }
 
@@ -385,6 +392,8 @@ config_parse_mapping(struct config *cfg, np_string *section, np_string *key, np_
             cfg->server->daemon = config_parse_bool(value->data);
         } else if (strcmp(key->data, "pfile") == 0) {
             string_copy(cfg->server->pfile, value);
+        } else if (strcmp(key->data, "redis_key") == 0) {
+            string_copy(cfg->server->redis_key, value);  
         } else {
             log_error("Unknow token: '%s: %s' in [server]", key->data, value->data);
             return NP_ERROR;
@@ -407,6 +416,8 @@ config_parse_mapping(struct config *cfg, np_string *section, np_string *key, np_
             cfg->redis->db = atoi(value->data);
         } else if (strcmp(key->data, "password") == 0) {
             string_copy(cfg->redis->password, value);
+        } else if (strcmp(key->data, "timeout") == 0) {
+            cfg->redis->timeout = atoi(value->data);
         } else {
             log_error("Unknow token: '%s: %s' in [redis]", key->data, value->data);
             return NP_ERROR;
@@ -546,6 +557,8 @@ config_dump(struct config *cfg)
     log_notice("\t port: %d", cfg->server->port);
     log_notice("\t daemon: %d", cfg->server->daemon);
     log_notice("\t pfile: %s", cfg->server->pfile->data);
+    log_notice("\t redis_key: %s", cfg->server->redis_key->data);
+
 
     log_notice("log");
     log_notice("\t file: %s", cfg->log->file->data);
@@ -556,6 +569,7 @@ config_dump(struct config *cfg)
     log_notice("\t port: %d", cfg->redis->port);
     log_notice("\t db: %d", cfg->redis->db);
     log_notice("\t password: %s", cfg->redis->password->data);
+    log_notice("\t timeout: %d", cfg->redis->timeout);
 
 }
 

@@ -20,6 +20,7 @@ struct config_server {
     int             port;
     unsigned        daemon:1;
     np_string       *pfile;
+    np_string       *redis_key;
 };
 
 struct config_log {
@@ -32,6 +33,7 @@ struct config_redis {
     int             port;
     int             db;
     np_string       *password;
+    int             timeout;
 };
 
 struct config {

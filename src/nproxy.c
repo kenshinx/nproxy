@@ -114,6 +114,54 @@ np_reinit_log(struct nproxy_server *server)
     return np_init_log(server);
 }
 
+redisContext *
+np_redis_connect(struct nproxy_server *server)
+{
+    redisContext *c;
+
+    struct timeval timeout  = {server->cfg->redis->timeout, 0};
+    
+    c = redisConnectWithTimeout(server->cfg->redis->server->data, server->cfg->redis->port, timeout);
+    if (c == NULL || c->err) {
+        if (c) {
+            log_error("connect redis '%s:%d' failed: %s\n", 
+                    server->cfg->redis->server->data, server->cfg->redis->port, c->errstr);
+            redisFree(c);
+        } else {
+            log_error("connect redis error. can't allocate redis context");
+        }
+
+        return NULL;
+    }
+
+    log_debug("connect redis %s:%d\n", server->cfg->redis->server->data, server->cfg->redis->port);
+    
+    return c;
+}
+
+static np_status_t
+np_get_proxy_pool(struct nproxy_server *server)
+{
+    redisContext *c;
+    redisReply *reply;
+    int i;
+    
+    c = np_redis_connect(server);
+    if (c == NULL) {
+        return NP_ERROR;
+    }
+
+    reply = redisCommand(c, "SMEMBERS %s", server->cfg->server->redis_key->data);
+
+    if (reply->type == REDIS_REPLY_ARRAY) {
+        for (i = 0; i < reply->elements; i++) {
+            printf("(%u) %s\n", i, reply->element[i]->str);
+        }
+    }
+    
+
+}
+
 static np_status_t
 np_setup_server(struct nproxy_server *server)
 {
@@ -142,6 +190,7 @@ np_setup_server(struct nproxy_server *server)
     return NP_OK;
 }
 
+
 static void
 np_print_run(struct nproxy_server *server)
 {
@@ -151,15 +200,11 @@ np_print_run(struct nproxy_server *server)
     log_stdout("config file: %s", server->configfile);
 }
 
+
 static void 
 np_run(struct nproxy_server *server)
 {
-    redisContext *c = redisConnect(server->cfg->redis->server->data, server->cfg->redis->port);
-    if (c != NULL && c->err) {
-        log_error("connect redis failed on %s:%d\n", 
-                server->cfg->redis->server->data, server->cfg->redis->port);
-    }
-    log_debug("connect redis %s:%d\n", server->cfg->redis->server->data, server->cfg->redis->port);
+    np_get_proxy_pool(server);
     
 }
 
