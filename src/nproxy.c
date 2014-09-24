@@ -42,10 +42,8 @@ static void
 np_init_server_config(struct nproxy_server *server)
 {
     server->configfile = NULL;
+    server->cfg = NULL;
     server->pidfile = NULL;
-    server->listen = NPROXY_DEFAULT_LISTEN;
-    server->port = NPROXY_DEFAULT_PORT;
-    server->daemon = NPROXY_DEFAULT_DAEMONIZE;
     server->logfile = NPROXY_DEFAULT_LOG_FILE;
     server->loglevel = NPROXY_DEFAULT_LOG_LEVEL;
     server->pid = getpid();
@@ -111,6 +109,8 @@ static np_status_t
 np_reinit_log(struct nproxy_server *server)
 {
     /* reinit log with configuration load from config file */
+    server->loglevel = server->cfg->log->level;
+    server->logfile = server->cfg->log->file->data;
     return np_init_log(server);
 }
 
@@ -146,7 +146,8 @@ static void
 np_print_run(struct nproxy_server *server)
 {
     log_stdout("nproxy server start");
-    log_stdout("listen on %s:%d", server->listen, server->port);
+    log_stdout("listen on %s:%d", server->cfg->server->listen->data, 
+            server->cfg->server->port);
     log_stdout("config file: %s", server->configfile);
 }
 
@@ -157,7 +158,6 @@ np_run(struct nproxy_server *server)
     if (c != NULL && c->err) {
         log_error("connect redis failed on %s:%d\n", 
                 server->cfg->redis->server->data, server->cfg->redis->port);
-        return;
     }
     log_debug("connect redis %s:%d\n", server->cfg->redis->server->data, server->cfg->redis->port);
     
