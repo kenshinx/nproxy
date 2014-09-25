@@ -11,6 +11,13 @@
 np_string *
 string_create(const char *data)
 {
+    size_t len = (data == NULL) ? 0 : strlen(data);
+    return string_create_with_len(data, (uint32_t)len);
+}
+
+np_string *
+string_create_with_len(const char *data, uint32_t len)
+{
     np_string *str;
 
     str = np_malloc(sizeof(*str));
@@ -18,15 +25,15 @@ string_create(const char *data)
         return NULL;
     }
 
-    str->len = strlen(data);
+    str->len = len;
     
-    str->data = np_malloc(str->len + 1);
+    str->data = np_malloc(len + 1);
     if (str->data == NULL) {
         return NULL;
     }
     strcpy(str->data, data);
 
-    return str;
+    return str; 
 }
 
 

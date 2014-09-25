@@ -7,6 +7,8 @@
 #define array_is_full(array)                    \
     ((array->nelts) == (array->nalloc))
 
+typedef void (*array_each_func)(void *);
+
 typedef struct np_array_s {
     void        *elts;
     uint32_t    nelts;
@@ -25,6 +27,8 @@ void *array_pop(np_array *array);
 void *array_head(np_array *array);
 
 void *array_get(np_array *array, uint32_t idx);
+
+void array_each(np_array *array, array_each_func func);
 
 
 static inline void

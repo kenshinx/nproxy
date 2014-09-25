@@ -12,10 +12,12 @@ typedef struct np_string {
     char        *data;
 } np_string;
 
-#define np_string(_str) {sizeof(_str) - 1, (char *)(_str)}
+#define np_string(_str, _len) {(uint32_t)(_len), (char *)(_str)}
 
 
 np_string *string_create(const char *data);
+
+np_string *string_create_with_len(const char *data, uint32_t len);
 
 np_string *string_null(void);
 

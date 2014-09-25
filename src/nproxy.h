@@ -1,6 +1,8 @@
 #ifndef _DPROXY_H_
 #define _DPROXY_H_
 
+#include "config.h"
+#include "array.h"
 
 
 #define NPROXY_DEBUG                    0
@@ -14,10 +16,13 @@
 #define NPROXY_DEFAULT_REDIS_SERVER     "127.0.0.1"
 #define NPROXY_DEFAULT_REDIS_PORT       6439
 
+#define NPROXY_PROXY_POOL_LENGTH        200
+
 
 struct nproxy_server {
     char            *configfile;
     struct config   *cfg;
+    np_array        *proxy_pool;   
     char            *pidfile;
     char            *logfile;
     int             loglevel;

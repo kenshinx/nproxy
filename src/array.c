@@ -108,6 +108,22 @@ array_head(np_array *array)
     return array_get(array, array->nelts - 1);
 }
 
+void
+array_each(np_array *array, array_each_func func)
+{
+    uint32_t i, nelts;
+    void *elt;
+    
+    np_assert(!array_is_empty(array));
+    np_assert(func != NULL);
+    
+    for (i = 0, nelts = array->nelts; i < nelts; i++) {
+        elt = array_get(array, i);
+        func(elt);
+    }
+    
+}
+
 
 
 

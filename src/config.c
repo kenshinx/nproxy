@@ -593,7 +593,6 @@ config_parse(struct config *cfg)
         return status;
     }
 
-    config_dump(cfg);
     return NP_OK;
 }
 

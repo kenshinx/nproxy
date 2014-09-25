@@ -1,7 +1,6 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
-
-#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -10,6 +9,8 @@
 
 #include "core.h"
 #include "config.h"
+#include "array.h"
+#include "string.h"
 #include "nproxy.h"
 
 
@@ -38,15 +39,23 @@ np_print_version(void)
     exit(0);
 }
 
-static void
-np_init_server_config(struct nproxy_server *server)
+static np_status_t 
+np_init_server(struct nproxy_server *server)
 {
     server->configfile = NULL;
     server->cfg = NULL;
+    
+    server->proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_string));
+    if (server->proxy_pool == NULL) {
+        return  NP_ERROR;
+    }
+
     server->pidfile = NULL;
     server->logfile = NPROXY_DEFAULT_LOG_FILE;
     server->loglevel = NPROXY_DEFAULT_LOG_LEVEL;
     server->pid = getpid();
+
+    return NP_OK;
 }
 
 static void
@@ -93,6 +102,7 @@ np_load_server_config(struct nproxy_server *server)
     }
     server->cfg = cfg;
     log_info("load config '%s' sucess", server->configfile);
+
     return NP_OK;
     
 }
@@ -140,11 +150,12 @@ np_redis_connect(struct nproxy_server *server)
 }
 
 static np_status_t
-np_get_proxy_pool(struct nproxy_server *server)
+np_load_proxy_pool(struct nproxy_server *server)
 {
     redisContext *c;
     redisReply *reply;
-    int i;
+    np_string   *proxy;
+    unsigned int i;
     
     c = np_redis_connect(server);
     if (c == NULL) {
@@ -155,12 +166,30 @@ np_get_proxy_pool(struct nproxy_server *server)
 
     if (reply->type == REDIS_REPLY_ARRAY) {
         for (i = 0; i < reply->elements; i++) {
-            printf("(%u) %s\n", i, reply->element[i]->str);
+            proxy = string_create_with_len(reply->element[i]->str, reply->element[i]->len);
+            array_push(server->proxy_pool, proxy);
         }
     }
-    
 
+    return NP_OK;
 }
+
+static void
+_np_print_pool(np_string *proxy)
+{
+    log_notice("%s", proxy->data);
+}
+
+static void 
+np_proxy_pool_dump(struct nproxy_server *server)
+{
+    np_string *proxy;
+
+    log_notice("[Nproxy proxy pool]");
+    array_each(server->proxy_pool, &_np_print_pool);
+    
+}
+
 
 static np_status_t
 np_setup_server(struct nproxy_server *server)
@@ -178,6 +207,8 @@ np_setup_server(struct nproxy_server *server)
         log_stderr("load config '%s' failed", server->configfile);
         return status;
     }    
+    
+    config_dump(server->cfg);
 
     status = np_reinit_log(server);
     if (status != NP_OK) {
@@ -185,7 +216,13 @@ np_setup_server(struct nproxy_server *server)
         return status;
     }
 
-
+    status = np_load_proxy_pool(server);
+    if (status != NP_OK) {
+        log_stderr("load proxy pool from redis failed.");
+        return status;
+    }
+    
+    np_proxy_pool_dump(server);
 
     return NP_OK;
 }
@@ -204,7 +241,7 @@ np_print_run(struct nproxy_server *server)
 static void 
 np_run(struct nproxy_server *server)
 {
-    np_get_proxy_pool(server);
+    printf("\n");
     
 }
 
@@ -215,7 +252,12 @@ main(int argc, char **argv)
     struct nproxy_server server;
     np_status_t status;
     
-    np_init_server_config(&server);
+    status = np_init_server(&server);
+    if (status != NP_OK) {
+        log_stderr("init server failed.");
+        exit(1);
+    }
+
     np_parse_option(argc, argv, &server);
 
     status = np_setup_server(&server);
