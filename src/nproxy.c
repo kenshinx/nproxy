@@ -65,19 +65,18 @@ np_parse_option(int argc, char **argv, struct nproxy_server *server)
     if (argc >= 2) {   
         if (strcmp(argv[1], "-V") == 0 || strcmp(argv[1], "--version") == 0) {
             np_print_version();
-        }
-        if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--verbose") == 0) {
+        } else if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--verbose") == 0) {
             server->loglevel = LOG_DEBUG;
-        }
-        if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+        } else if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
             np_show_usage();
-        }
-        if (strcmp(argv[1], "-c") == 0 || strcmp(argv[1], "--config") == 0) {
+        } else if (strcmp(argv[1], "-c") == 0 || strcmp(argv[1], "--config") == 0) {
             if (argc != 3) {
                 np_show_usage();
             } else {
                 configfile = argv[2];
             }
+        } else {
+            np_show_usage();   
         }
     }
 
