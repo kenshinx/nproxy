@@ -11,6 +11,7 @@
 #include "config.h"
 #include "array.h"
 #include "string.h"
+#include "proxy.h"
 #include "nproxy.h"
 
 
@@ -45,7 +46,7 @@ np_init_server(struct nproxy_server *server)
     server->configfile = NULL;
     server->cfg = NULL;
     
-    server->proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_string));
+    server->proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_proxy));
     if (server->proxy_pool == NULL) {
         return  NP_ERROR;
     }
@@ -151,9 +152,9 @@ np_redis_connect(struct nproxy_server *server)
 static np_status_t
 np_load_proxy_pool(struct nproxy_server *server)
 {
-    redisContext *c;
-    redisReply *reply;
-    np_string   *proxy;
+    redisContext    *c;
+    redisReply      *reply;
+    np_proxy        *proxy;
     unsigned int i;
     
     c = np_redis_connect(server);
@@ -165,8 +166,10 @@ np_load_proxy_pool(struct nproxy_server *server)
 
     if (reply->type == REDIS_REPLY_ARRAY) {
         for (i = 0; i < reply->elements; i++) {
-            proxy = string_create_with_len(reply->element[i]->str, reply->element[i]->len);
-            array_push(server->proxy_pool, proxy);
+            proxy = proxy_from_json(reply->element[i]->str);
+            if (proxy != NULL) {
+                array_push(server->proxy_pool, proxy);
+            }
         }
     }
 
@@ -174,18 +177,16 @@ np_load_proxy_pool(struct nproxy_server *server)
 }
 
 static void
-_np_print_pool(np_string *proxy)
+_np_print_proxy(np_proxy *proxy)
 {
-    log_notice("%s", proxy->data);
+    log_notice("%s://%s:%d", proxy->proto->data, proxy->host->data, proxy->port);
 }
 
 static void 
 np_proxy_pool_dump(struct nproxy_server *server)
 {
-    np_string *proxy;
-
     log_notice("[Nproxy proxy pool]");
-    array_each(server->proxy_pool, &_np_print_pool);
+    array_foreach(server->proxy_pool, &_np_print_proxy);
     
 }
 

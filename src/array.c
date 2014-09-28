@@ -109,7 +109,7 @@ array_head(np_array *array)
 }
 
 void
-array_each(np_array *array, array_each_func func)
+array_foreach(np_array *array, array_foreach_func func)
 {
     uint32_t i, nelts;
     void *elt;

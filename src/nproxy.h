@@ -18,7 +18,6 @@
 
 #define NPROXY_PROXY_POOL_LENGTH        200
 
-
 struct nproxy_server {
     char            *configfile;
     struct config   *cfg;

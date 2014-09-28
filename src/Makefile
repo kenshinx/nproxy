@@ -1,9 +1,10 @@
 
 OS := $(shell sh -c 'uname -s 2>/dev/null || echo unknow')
 ROOT := $(shell sh -c 'cd .. ; pwd')
-DEPENDENCY_TARGETS=libyaml hiredis
+DEPENDENCY_TARGETS=libyaml hiredis jansson
 LIBYAML=yaml-0.1.5
 HIREDIS=hiredis-0.11.0
+JANSSON=jansson-2.6
 
 
 STD=-STD=C99 -pendantic
@@ -22,6 +23,7 @@ FINAL_LDFLAGS=$(LDFLAGS) $(DEBUG)
 FINAL_LIBS=-lm
 FINAL_CFLAGS+= -I../contrib/$(LIBYAML)/include
 FINAL_CFLAGS+= -I../contrib/$(HIREDIS)
+FINAL_CFLAGS+= -I../contrib/$(JANSSON)/src
 
 CC?=gcc
 
@@ -29,17 +31,18 @@ NPROXY_CC=$(CC) $(FINAL_CFLAGS)
 NPROXY_LD=$(CC) $(FINAL_LDFLAGS)
 
 NPROXY_BIN=nproxy
-NPROXY_OBJ=nproxy.o config.o util.o log.o array.o string.o
+NPROXY_OBJ=nproxy.o config.o proxy.o util.o log.o array.o string.o
 
 nproxy.o: nproxy.c nproxy.h core.h config.h ../contrib/$(HIREDIS)/hiredis.h
 config.o: config.c config.h core.h ../contrib/$(LIBYAML)/include/yaml.h
+proxy.o: proxy.c proxy.h 
 log.o: log.c log.h util.h 
 util.o: util.c util.h 
 array.o: array.c array.h core.h
 string.o: string.c string.h core.h
 
 $(NPROXY_BIN): $(NPROXY_OBJ)
-	$(NPROXY_LD) -o $@ $^ $(FINAL_LIBS) ../contrib/$(LIBYAML)/src/.libs/libyaml.a ../contrib/$(HIREDIS)/libhiredis.a 
+	$(NPROXY_LD) -o $@ $^ $(FINAL_LIBS) ../contrib/$(LIBYAML)/src/.libs/libyaml.a ../contrib/$(HIREDIS)/libhiredis.a ../contrib/$(JANSSON)/src/.libs/libjansson.a 
 
 PREPARE=make-contrib
 
