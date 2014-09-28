@@ -23,7 +23,7 @@ log_init()
 }
 
 int
-log_create(int level, const char *fname)
+log_update(int level, const char *fname)
 {
     struct logger *l = &logger;
     l->level = level;

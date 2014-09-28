@@ -112,9 +112,12 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    status = log_create(server.cfg->log->level, server.cfg->log->file->data);
+    /*
+     * Update logger with the option in config file 
+     */
+    status = log_update(server.cfg->log->level->data, server.cfg->log->file->data);
     if (status != NP_OK) {
-        log_stderr("init log failed");
+        log_stderr("update log failed");
         exit(1);
     }
     
