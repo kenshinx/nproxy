@@ -9,7 +9,7 @@
 
 #include "string.h"
 #include "array.h"
-#import "config.h"
+#include "config.h"
 #include "proxy.h"
 #include "server.h"
 
