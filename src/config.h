@@ -12,6 +12,15 @@
 #define CONFIG_MAX_DEPTH    CONFIG_ROOT_DEPTH + 1
 #define CONFIG_ARGS_LENGTH  4
 
+#define NPROXY_DEFAULT_CONFIG_FILE      "conf/nproxy.yml"
+#define NPROXY_DEFAULT_LISTEN           "127.0.0.1"
+#define NPROXY_DEFAULT_PORT             1221
+#define NPROXY_DEFAULT_DAEMONIZE        0
+#define NPROXY_DEFAULT_LOG_FILE         NULL
+#define NPROXY_DEFAULT_LOG_LEVEL        LOG_INFO
+#define NPROXY_DEFAULT_REDIS_SERVER     "127.0.0.1"
+#define NPROXY_DEFAULT_REDIS_PORT       6439
+
 typedef uint8_t yaml_char;
 typedef uint32_t yaml_len;
 

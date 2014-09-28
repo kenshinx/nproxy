@@ -48,12 +48,13 @@
 } while (0)                                              \
 
 struct logger {
-    const char *name;
+    const char *fname;
     int level;
     FILE *fd;
 };
 
-int log_init(int level, const char *name);
+void log_init();
+int log_create(int level, const char *fname);
 void log_destory(void);
 void log_set_level(int level);
 void log_level_to_text(int level, char *text);

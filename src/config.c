@@ -4,9 +4,10 @@
 #include <errno.h>
 #include <yaml.h>
 
-#include "nproxy.h"
 #include "core.h"
+#include "util.h"
 #include "config.h"
+
 
 static struct config_server *
 config_server_init(void)
@@ -64,8 +65,7 @@ config_log_init(void)
         return NULL;
     }
 
-    sprintf(default_level, "%d", NPROXY_DEFAULT_LOG_LEVEL);
-    log->level = string_create(default_level);
+    log->level = string_null();
     if (log->level == NULL) {
         return NULL;
     }

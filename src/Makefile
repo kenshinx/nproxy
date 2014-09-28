@@ -31,11 +31,12 @@ NPROXY_CC=$(CC) $(FINAL_CFLAGS)
 NPROXY_LD=$(CC) $(FINAL_LDFLAGS)
 
 NPROXY_BIN=nproxy
-NPROXY_OBJ=nproxy.o config.o proxy.o util.o log.o array.o string.o
+NPROXY_OBJ=nproxy.o config.o server.o proxy.o util.o log.o array.o string.o
 
-nproxy.o: nproxy.c nproxy.h core.h config.h ../contrib/$(HIREDIS)/hiredis.h
+nproxy.o: nproxy.c core.h config.h 
 config.o: config.c config.h core.h ../contrib/$(LIBYAML)/include/yaml.h
-proxy.o: proxy.c proxy.h 
+server.o: server.c server.h ../contrib/$(HIREDIS)/hiredis.h
+proxy.o: proxy.c proxy.h ../contrib/$(JANSSON)/src/jansson.h 
 log.o: log.c log.h util.h 
 util.o: util.c util.h 
 array.o: array.c array.h core.h

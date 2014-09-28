@@ -13,18 +13,27 @@
 
 static struct logger logger;
 
+void 
+log_init()
+{
+    struct logger *l = &logger;
+    l->level = LOG_NOTICE;
+    l->fname = NULL;
+    l->fd = stdout;
+}
+
 int
-log_init(int level,const char *name)
+log_create(int level, const char *fname)
 {
     struct logger *l = &logger;
     l->level = level;
-    l->name = name;
-    if (name == NULL || name[0] == '\0') {
+    l->fname = fname;
+    if (fname == NULL || fname[0] == '\0') {
         l->fd = stdout;
     } else {
-        l->fd = fopen(name, "a");
+        l->fd = fopen(fname, "a");
         if (l->fd == NULL) {
-            log_stderr("opening log file '%s' failed", name);
+            log_stderr("opening log file '%s' failed", fname);
             return -1;
         }
     }
