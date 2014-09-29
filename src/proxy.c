@@ -2,6 +2,7 @@
 #include <jansson.h>
 
 #include "string.h"
+#include "log.h"
 #include "proxy.h"
 
 
@@ -56,6 +57,5 @@ proxy_from_json(const char *str)
     }
 
     return proxy_create(host, port, proto, username, password);
-    
-
 }
+

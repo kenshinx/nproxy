@@ -10,6 +10,7 @@
 #include "util.h"
 #include "config.h"
 #include "version.h"
+#include "log.h"
 #include "server.h"
 
 
@@ -46,6 +47,7 @@ np_parse_option(int argc, char **argv, struct nproxy_server *server)
             np_print_version();
         } else if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--verbose") == 0) {
             log_set_level(LOG_DEBUG);
+            server->debug = true;
         } else if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
             np_show_usage();
         } else if (strcmp(argv[1], "-c") == 0 || strcmp(argv[1], "--config") == 0) {
@@ -115,7 +117,12 @@ main(int argc, char **argv)
     /*
      * Update logger with the option in config file 
      */
-    status = log_update(server.cfg->log->level->data, server.cfg->log->file->data);
+    if (server.debug) {
+        status = log_update(LOG_DEBUG, server.cfg->log->file->data);
+    } else {
+        int log_level = log_level_to_int(server.cfg->log->level->data);
+        status = log_update(log_level, server.cfg->log->file->data);
+    }
     if (status != NP_OK) {
         log_stderr("update log failed");
         exit(1);

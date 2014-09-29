@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#include "core.h"
+
 
 #define LOG_DEBUG       0
 #define LOG_VERBOSE     1
@@ -11,6 +13,9 @@
 #define LOG_WARN        4
 #define LOG_ERROR       5
 #define LOG_CRITICAL    6
+#define LOG_LEVEL_MIN   0
+#define LOG_LEVEL_MAX   6
+#define LOG_UNDEFINED_LEVEL -1
 
 #define LOG_MAX_LENGTH  512
 
@@ -47,6 +52,7 @@
     _log_stream(stdout, __VA_ARGS__);                   \
 } while (0)                                              \
 
+
 struct logger {
     const char *fname;
     int level;
@@ -54,10 +60,11 @@ struct logger {
 };
 
 void log_init();
-int log_create(int level, const char *fname);
+np_status_t log_update(int level, const char *fname);
 void log_destory(void);
-void log_set_level(int level);
+np_status_t log_set_level(int level);
 void log_level_to_text(int level, char *text);
+int log_level_to_int(const char *text);
 void _log(int level, const char *file, int line, const char *fmt, ...);
 void _log_stream(FILE *stream, const char *fmt, ...);
 

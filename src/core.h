@@ -10,7 +10,6 @@
 #include "util.h"
 #include "string.h"
 #include "array.h"
-#include "log.h"
 
 #define CRLF                        "\r\n"
 #define NP_OK                       0

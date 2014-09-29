@@ -5,6 +5,7 @@
 #include <yaml.h>
 
 #include "core.h"
+#include "log.h"
 #include "util.h"
 #include "config.h"
 
@@ -53,7 +54,6 @@ static struct config_log *
 config_log_init(void)
 {
     struct config_log *log;
-    char default_level[2];
 
     log = np_malloc(sizeof(*log));
     if (log == NULL) {

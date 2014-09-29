@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/types.h>
 
 #include <hiredis.h>
@@ -10,6 +11,7 @@
 #include "array.h"
 #include "config.h"
 #include "proxy.h"
+#include "log.h"
 #include "server.h"
 
 np_status_t 
@@ -25,6 +27,8 @@ server_init(struct nproxy_server *server)
 
     server->pidfile = NULL;
     server->pid = getpid();
+    
+    server->debug = false;
 
     return NP_OK;
 }
@@ -43,7 +47,6 @@ server_load_config(struct nproxy_server *server)
     log_info("load config '%s' sucess", server->configfile);
 
     return NP_OK;
-    
 }
 
 redisContext *
@@ -110,7 +113,7 @@ static void
 server_proxy_pool_dump(struct nproxy_server *server)
 {
     log_notice("[Nproxy proxy pool]");
-    array_foreach(server->proxy_pool, &_print_proxy);
+    array_foreach(server->proxy_pool, (array_foreach_func)&_print_proxy);
 }
 
 np_status_t

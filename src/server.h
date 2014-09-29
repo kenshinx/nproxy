@@ -13,6 +13,7 @@ struct nproxy_server {
     np_array        *proxy_pool;   
     char            *pidfile;
     pid_t           pid;
+    unsigned        debug:1;
 }; 
 
 

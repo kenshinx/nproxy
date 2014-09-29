@@ -9,9 +9,20 @@
 #include <sys/time.h>
 
 #include "util.h"
+#include "core.h"
 #include "log.h"
 
 static struct logger logger;
+
+static const char *LOG_LEVEL_MAP[] = {
+    "DEBUG",
+    "VERBOSE", 
+    "INFO", 
+    "NOTICE", 
+    "WARN", 
+    "ERROR", 
+    "CRITICAL"
+};
 
 void 
 log_init()
@@ -22,23 +33,30 @@ log_init()
     l->fd = stdout;
 }
 
-int
+np_status_t
 log_update(int level, const char *fname)
 {
     struct logger *l = &logger;
-    l->level = level;
+    np_status_t status;
+    
+    status = log_set_level(level);
+    if (status != NP_OK) {
+        return status;
+    }
+
     l->fname = fname;
+    
     if (fname == NULL || fname[0] == '\0') {
         l->fd = stdout;
     } else {
         l->fd = fopen(fname, "a");
         if (l->fd == NULL) {
             log_stderr("opening log file '%s' failed", fname);
-            return -1;
+            return NP_ERROR;
         }
     }
     
-    return 0;
+    return NP_OK;
 }
 
 
@@ -54,32 +72,45 @@ log_detroy(void)
     fclose(l->fd);
 }
 
-void
+np_status_t
 log_set_level(int level)
 {
     struct logger *l = &logger;
+
+    if (level < LOG_LEVEL_MIN || level > LOG_LEVEL_MAX) {
+        return NP_ERROR;
+    }
+
     l->level = level;
+
+    return NP_OK;
 }
 
 void
 log_level_to_text(int level, char *text)
 {
     int max_level;
-    const char *log_level_map[] = {"DEBUG",
-                                   "VERBOSE", 
-                                   "INFO", 
-                                   "NOTICE", 
-                                   "WARN", 
-                                   "ERROR", 
-                                   "CRITICAL"};
-    
-    max_level = string_array_length(log_level_map);
+    max_level = string_array_length(LOG_LEVEL_MAP);
     if (level >= max_level) {
         return;
     }
     
-    const char *temp = log_level_map[level];
+    const char *temp = LOG_LEVEL_MAP[level];
     strcpy(text, temp);
+}
+
+int 
+log_level_to_int(const char *text)
+{
+    int i, max_level;
+    for (i = 0; i < max_level; i++) {
+        if (strcmp(LOG_LEVEL_MAP[i], text) == 0) {
+            return i;
+        }
+    }
+
+    return LOG_UNDEFINED_LEVEL;  
+    
 }
 
 
