@@ -60,7 +60,7 @@ struct config {
     unsigned                valid_token:1;
 };
 
-struct config *config_creat(char *filename);
+struct config *config_create(char *filename);
 void config_dump(struct config *cfg);
 
 #endif

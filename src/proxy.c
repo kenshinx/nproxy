@@ -59,3 +59,16 @@ proxy_from_json(const char *str)
     return proxy_create(host, port, proto, username, password);
 }
 
+static void
+proxy_print(np_proxy *proxy)
+{
+    log_notice("%s://%s:%d", proxy->proto->data, proxy->host->data, proxy->port);
+}
+
+void 
+proxy_pool_dump(np_array *proxy_pool)
+{
+    log_notice("[Nproxy proxy pool]");
+    array_foreach(proxy_pool, (array_foreach_func)&proxy_print);
+}
+

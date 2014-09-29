@@ -597,7 +597,7 @@ config_parse(struct config *cfg)
 }
 
 struct config *
-config_creat(char *filename)
+config_create(char *filename)
 {
     struct config *cfg;
     np_status_t status;

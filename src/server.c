@@ -39,7 +39,7 @@ server_load_config(struct nproxy_server *server)
 {
     
     struct config *cfg;
-    cfg = config_creat(server->configfile);
+    cfg = config_create(server->configfile);
     if (cfg == NULL) {
         return NP_ERROR;
     }
@@ -103,19 +103,6 @@ server_load_proxy_pool(struct nproxy_server *server)
     return NP_OK;
 }
 
-static void
-_print_proxy(np_proxy *proxy)
-{
-    log_notice("%s://%s:%d", proxy->proto->data, proxy->host->data, proxy->port);
-}
-
-static void 
-server_proxy_pool_dump(struct nproxy_server *server)
-{
-    log_notice("[Nproxy proxy pool]");
-    array_foreach(server->proxy_pool, (array_foreach_func)&_print_proxy);
-}
-
 np_status_t
 server_setup(struct nproxy_server *server)
 {
@@ -135,7 +122,7 @@ server_setup(struct nproxy_server *server)
         return status;
     }
     
-    server_proxy_pool_dump(server);
+    proxy_pool_dump(server->proxy_pool);
 
     return NP_OK;
 }
