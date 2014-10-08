@@ -33,7 +33,6 @@ server_init(struct nproxy_server *server)
     return NP_OK;
 }
 
-
 static np_status_t
 server_load_config(struct nproxy_server *server)
 {
@@ -127,3 +126,9 @@ server_setup(struct nproxy_server *server)
     return NP_OK;
 }
 
+
+void
+server_run(struct nproxy_server *server)
+{
+    printf("\n");
+}

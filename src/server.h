@@ -21,5 +21,7 @@ np_status_t server_init(struct nproxy_server *server);
 
 np_status_t server_setup(struct nproxy_server *server);
 
+void server_run(struct nproxy_server *server);
+
 #endif
 

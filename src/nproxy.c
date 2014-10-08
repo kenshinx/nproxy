@@ -81,13 +81,6 @@ np_print_run(struct nproxy_server *server)
     log_stdout("config file: %s", server->configfile);
 }
 
-
-static void 
-np_run(struct nproxy_server *server)
-{
-    printf("\n");
-}
-
 int
 main(int argc, char **argv)
 {
@@ -129,7 +122,8 @@ main(int argc, char **argv)
     }
     
     np_print_run(&server);
-    np_run(&server);
+    
+    server_run(&server);
     
     exit(1);
     
