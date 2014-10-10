@@ -25,6 +25,16 @@ proxy_create(np_string *host, int port, np_string *proto, np_string *username, n
     return proxy;
 }
 
+void
+proxy_destroy(np_proxy *proxy)
+{
+    string_destroy(proxy->host);
+    string_destroy(proxy->proto);
+    string_destroy(proxy->username);
+    string_destroy(proxy->password);
+    np_free(proxy);
+}
+
 np_proxy *
 proxy_from_json(const char *str)
 {

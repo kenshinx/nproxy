@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
+#include <uv.h>
 #include <hiredis.h>
 
 #include "string.h"

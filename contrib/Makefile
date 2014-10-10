@@ -12,12 +12,15 @@ ROOT := $(shell sh -c 'cd .. ; pwd')
 LIBYAML=yaml-0.1.5
 HIREDIS=hiredis-0.11.0
 JANSSON=jansson-2.6
+LIBUV=libuv-1.0.0-rc1
+
 
 
 distclean:
 	-(cd $(LIBYAML) && $(MAKE) clean) >/dev/null || true
 	-(cd $(HIREDIS) && $(MAKE) clean) >/dev/null || true
 	-(cd $(JANSSON) && $(MAKE) clean) >/dev/null || true
+	-(cd $(LIBUV) && $(MAKE) clean) >/dev/null || true
 
 .PHONY: distclean
 
@@ -40,5 +43,11 @@ jansson:
 	@printf '%b %b\n' $(MAKECOLOR)MAKE$(ENDCOLOR) $(BINCOLOR)$@$(ENDCOLOR)
 	cd $(JANSSON) && ./configure && $(MAKE) 
 
-.PHNOY: jansson
+.PHONY: jansson
+
+libuv:
+	@printf '%b %b\n' $(MAKECOLOR)MAKE$(ENDCOLOR) $(BINCOLOR)$@$(ENDCOLOR)
+	cd $(LIBUV) && sh autogen.sh && ./configure && $(MAKE) 
+
+.PHONY: libuv
 
