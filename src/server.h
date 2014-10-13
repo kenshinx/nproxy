@@ -41,6 +41,12 @@ struct nproxy_server {
     unsigned        debug:1;
 }; 
 
+typedef struct nproxy_context {
+    uv_tcp_t        *client;
+    struct sockaddr *remote_addr;
+    char            *remote_ip;
+} np_context_t;
+
 
 np_status_t server_init(struct nproxy_server *server);
 

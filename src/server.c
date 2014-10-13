@@ -40,6 +40,29 @@ server_init(struct nproxy_server *server)
 }
 
 static np_status_t
+server_context_init(np_context_t *ctx)
+{
+    ctx->client = (uv_tcp_t *)np_malloc(sizeof(*ctx->client));
+    if (ctx->client == NULL) {
+        return NP_ERROR;
+    }
+
+    ctx->remote_addr = NULL;
+    ctx->remote_ip = NULL;
+
+    return NP_OK;
+}
+
+static void
+server_context_deinit(np_context_t *ctx)
+{
+    np_free(ctx->client);
+    np_free(ctx->remote_addr);
+    np_free(ctx->remote_ip);
+    np_free(ctx);
+}
+
+static np_status_t
 server_load_config(struct nproxy_server *server)
 {
     
@@ -151,7 +174,7 @@ server_get_remote_addr(uv_stream_t *handler)
     }    
     
     namelen = sizeof(*remote_addr);
-    printf("handler->type: %d\n", handler->type);
+
     err = uv_tcp_getpeername((uv_tcp_t *)handler, remote_addr, &namelen);
     if (err != 0) {
         log_error("get remote ip failed");
@@ -221,22 +244,34 @@ static void
 server_on_connect(uv_stream_t *us, int status)
 {
     int err;
-    char *remote_ip;
+    np_status_t state;
+    np_context_t *ctx;
     
     UV_CHECK(status, "libuv on connect");
 
-    uv_tcp_t *uc = (uv_tcp_t *) malloc(sizeof(uv_tcp_t));
-    uv_tcp_init(us->loop, uc);
-    
-    err = uv_accept((uv_stream_t *)us, (uv_stream_t *)uc);
-    UV_CHECK(err, "libuv accept");
+    ctx = (np_context_t *)np_malloc(sizeof(*ctx));
+    if (ctx == NULL) {
+        return;
+    }
 
-    err = uv_read_start((uv_stream_t *)uc, (uv_alloc_cb)server_handshake_alloc_cb, (uv_read_cb)server_on_read);
+    state = server_context_init(ctx);
+    if (state != NP_OK) {
+        log_stderr("init context error");
+        return;
+    }
+
+    uv_tcp_init(us->loop, ctx->client);
+    
+    err = uv_accept((uv_stream_t *)us, (uv_stream_t *)ctx->client);
+    UV_CHECK(err, "libuv accept");
+    
+    ctx->remote_addr = server_get_remote_addr((uv_stream_t *)ctx->client);
+    ctx->remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)ctx->remote_addr);
+
+    err = uv_read_start((uv_stream_t *)ctx->client, (uv_alloc_cb)server_handshake_alloc_cb, (uv_read_cb)server_on_read);
     UV_CHECK(err, "libuv read_start");
     
-    REMOTE_IP(uc, remote_ip);
-    log_debug("Aceepted connect from %s", remote_ip);
-    np_free(remote_ip);
+    log_debug("Aceepted connect from %s", ctx->remote_ip);
 }
 
 void
@@ -263,7 +298,7 @@ server_run(struct nproxy_server *server)
     server->us = us;
     server->loop = loop;
     
-    err = uv_listen(us, MAX_CONNECT_QUEUE, server_on_connect);
+    err = uv_listen((uv_stream_t *)us, MAX_CONNECT_QUEUE, server_on_connect);
     UV_CHECK(err, "libuv listen");
 
     uv_run(loop, UV_RUN_DEFAULT);
