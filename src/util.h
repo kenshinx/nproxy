@@ -9,8 +9,11 @@
 #define np_realloc(ptr, size)                           \
     _np_realloc(ptr, size, __FILE__, __LINE__)
 
-#define np_free(ptr)                                    \
-    _np_free(ptr, __FILE__, __LINE__)      
+#define np_free(ptr) do {                               \
+    if (ptr != NULL) {                                  \
+        _np_free(ptr, __FILE__, __LINE__);               \
+    }                                                   \
+} while(0)
 
 #define np_memcpy(dest, src, size)                      \
     memcpy(dest, src, (size_t)(size))
