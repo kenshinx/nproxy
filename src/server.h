@@ -8,16 +8,19 @@
 #include "core.h"
 #include "array.h"
 #include "string.h"
+#include "socks.h"
 
 #define NPROXY_PROXY_POOL_LENGTH 200
 #define MAX_CONNECT_QUEUE 512
 
 #define UV_CHECK(err, what) do {                                             \
     if ((err) != 0) {                                                       \
-        log_stderr("server run failed. %s:%s", what, uv_err_name(err));      \
+        log_error("server run failed. %s:%s", what, uv_err_name(err));      \
         abort();                                                            \
     }                                                                       \
 } while(0)                                                                  
+
+#define UV_SHOW_ERROR(err, what) log_error("%s:%s", what, uv_strerror(err))     \
 
 
 #define REMOTE_IP(handler, ip) do {                                             \
@@ -42,9 +45,10 @@ struct nproxy_server {
 }; 
 
 typedef struct nproxy_context {
-    uv_tcp_t        *client;
-    struct sockaddr *remote_addr;
-    char            *remote_ip;
+    uv_tcp_t            *client;
+    struct sockaddr     *remote_addr;
+    char                *remote_ip;
+    struct s5_handler   *handler;
 } np_context_t;
 
 

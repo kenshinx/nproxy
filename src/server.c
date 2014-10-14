@@ -156,8 +156,9 @@ server_setup(struct nproxy_server *server)
 }
 
 static uv_buf_t *
-server_handshake_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf) {
+server_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf) {
         *buf = uv_buf_init((char*) malloc(suggested_size), suggested_size);
+        np_assert(buf->base != NULL);
         return buf;
 }
 
@@ -234,9 +235,28 @@ server_get_remote_ip(uv_stream_t *handler)
 }
 
 static void
+server_on_close(uv_handle_t *stream)
+{
+    np_context_t *ctx = (np_context_t *)stream->data;
+    server_context_deinit(ctx);
+}
+
+static void
 server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
-    log_stdout("read: %s", buf->base);
+    np_context_t *ctx = stream->data;
+    np_assert(ctx->client == stream);
+
+    if (nread < 0) {
+        if (nread != UV_EOF) {
+            UV_SHOW_ERROR(nread, "read error");
+        }
+        uv_close((uv_handle_t *) ctx->client, (uv_close_cb *)server_on_close);
+        return;
+    } else {
+        log_stdout(buf->base);
+    }
+    np_free(buf->base);
 }
 
 
@@ -267,8 +287,10 @@ server_on_connect(uv_stream_t *us, int status)
     
     ctx->remote_addr = server_get_remote_addr((uv_stream_t *)ctx->client);
     ctx->remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)ctx->remote_addr);
+    
+    ctx->client->data = ctx;
 
-    err = uv_read_start((uv_stream_t *)ctx->client, (uv_alloc_cb)server_handshake_alloc_cb, (uv_read_cb)server_on_read);
+    err = uv_read_start((uv_stream_t *)ctx->client, (uv_alloc_cb)server_alloc_cb, (uv_read_cb)server_on_read);
     UV_CHECK(err, "libuv read_start");
     
     log_debug("Aceepted connect from %s", ctx->remote_ip);
