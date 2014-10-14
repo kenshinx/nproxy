@@ -267,8 +267,11 @@ server_on_connect(uv_stream_t *us, int status)
     np_status_t state;
     np_context_t *ctx;
     
-    UV_CHECK(status, "libuv on connect");
-
+    if (status != 0) {
+        UV_SHOW_ERROR(status, "libuv on connect");
+        return;
+    }
+    
     ctx = (np_context_t *)np_malloc(sizeof(*ctx));
     if (ctx == NULL) {
         return;
@@ -283,7 +286,10 @@ server_on_connect(uv_stream_t *us, int status)
     uv_tcp_init(us->loop, ctx->client);
     
     err = uv_accept((uv_stream_t *)us, (uv_stream_t *)ctx->client);
-    UV_CHECK(err, "libuv accept");
+    if (err) {
+        UV_SHOW_ERROR(err, "libuv on accept");
+        return;
+    }
     
     ctx->remote_addr = server_get_remote_addr((uv_stream_t *)ctx->client);
     ctx->remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)ctx->remote_addr);
@@ -291,7 +297,9 @@ server_on_connect(uv_stream_t *us, int status)
     ctx->client->data = ctx;
 
     err = uv_read_start((uv_stream_t *)ctx->client, (uv_alloc_cb)server_alloc_cb, (uv_read_cb)server_on_read);
-    UV_CHECK(err, "libuv read_start");
+    if (err) {
+        UV_SHOW_ERROR(err, "libuv read start");
+    }
     
     log_debug("Aceepted connect from %s", ctx->remote_ip);
 }
