@@ -5,7 +5,7 @@
 #define SOCKSV4     2
 #define SOCKSV5     3
 
-struct s5_handler {
+struct socks5_handler {
     char    *protocol;
     int     version;
 };

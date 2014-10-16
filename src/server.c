@@ -13,8 +13,9 @@
 #include "string.h"
 #include "array.h"
 #include "config.h"
-#include "proxy.h"
 #include "log.h"
+#include "proxy.h"
+#include "socks.h"
 #include "server.h"
 
 np_status_t 
@@ -39,24 +40,9 @@ server_init(struct nproxy_server *server)
     return NP_OK;
 }
 
-static np_status_t
-server_context_init(np_context_t *ctx)
-{
-    ctx->client = (uv_tcp_t *)np_malloc(sizeof(*ctx->client));
-    if (ctx->client == NULL) {
-        return NP_ERROR;
-    }
-
-    ctx->remote_addr = NULL;
-    ctx->remote_ip = NULL;
-
-    return NP_OK;
-}
-
 static void
 server_context_deinit(np_context_t *ctx)
 {
-    np_free(ctx->client);
     np_free(ctx->remote_addr);
     np_free(ctx->remote_ip);
     np_free(ctx);
@@ -245,13 +231,13 @@ static void
 server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
     np_context_t *ctx = stream->data;
-    np_assert(ctx->client == stream);
+    np_assert((uv_stream_t *)&ctx->client == stream);
 
     if (nread < 0) {
         if (nread != UV_EOF) {
             UV_SHOW_ERROR(nread, "read error");
         }
-        uv_close((uv_handle_t *) ctx->client, (uv_close_cb *)server_on_close);
+        uv_close((uv_handle_t *)&ctx->client, (uv_close_cb)server_on_close);
         return;
     } else {
         log_stdout(buf->base);
@@ -277,26 +263,20 @@ server_on_connect(uv_stream_t *us, int status)
         return;
     }
 
-    state = server_context_init(ctx);
-    if (state != NP_OK) {
-        log_stderr("init context error");
-        return;
-    }
-
-    uv_tcp_init(us->loop, ctx->client);
+    uv_tcp_init(us->loop, &ctx->client);
     
-    err = uv_accept((uv_stream_t *)us, (uv_stream_t *)ctx->client);
+    err = uv_accept((uv_stream_t *)us, (uv_stream_t *)&ctx->client);
     if (err) {
         UV_SHOW_ERROR(err, "libuv on accept");
         return;
     }
     
-    ctx->remote_addr = server_get_remote_addr((uv_stream_t *)ctx->client);
+    ctx->remote_addr = server_get_remote_addr((uv_stream_t *)&ctx->client);
     ctx->remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)ctx->remote_addr);
     
-    ctx->client->data = ctx;
+    ctx->client.data = ctx;
 
-    err = uv_read_start((uv_stream_t *)ctx->client, (uv_alloc_cb)server_alloc_cb, (uv_read_cb)server_on_read);
+    err = uv_read_start((uv_stream_t *)&ctx->client, (uv_alloc_cb)server_alloc_cb, (uv_read_cb)server_on_read);
     if (err) {
         UV_SHOW_ERROR(err, "libuv read start");
     }

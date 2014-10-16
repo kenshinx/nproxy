@@ -32,6 +32,22 @@
     np_free(remote_addr);                                                       \
 } while(0)
 
+/*
+union proxy_handler {
+#ifdef SOCK5_PROXY_SUPPORT
+    struct s5_handler;
+#endif
+
+#ifdef SOCK4_PROXY_SUPPORT
+    struct s4_handler;
+#endif
+
+#ifdef HTTP_PROXY_SUPPORT
+    struct http_handler;
+#endif
+};
+*/
+
 
 struct nproxy_server {
     uv_tcp_t        *us; /* libuv tcp server */
@@ -45,10 +61,10 @@ struct nproxy_server {
 }; 
 
 typedef struct nproxy_context {
-    uv_tcp_t            *client;
-    struct sockaddr     *remote_addr;
-    char                *remote_ip;
-    struct s5_handler   *handler;
+    uv_tcp_t                client;
+    struct socks5_handler   handler;
+    struct sockaddr         *remote_addr;
+    char                    *remote_ip;
 } np_context_t;
 
 

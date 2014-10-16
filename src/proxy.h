@@ -1,7 +1,11 @@
-#ifndef _NPROXY_SOCKS_H_
-#define _NPROXY_SOCKS_H_
+#ifndef _NPROXY_PROXY_H_
+#define _NPROXY_PROXY_H_
 
 #include "string.h"
+
+#ifndef SOCKS5_PROXY_SUPPORT
+#define SOCKS5_PROXY_SUPPORT
+#endif
 
 
 typedef struct np_proxy {
