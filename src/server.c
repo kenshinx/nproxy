@@ -40,9 +40,30 @@ server_init(struct nproxy_server *server)
     return NP_OK;
 }
 
+
+static np_status_t
+server_context_init(np_context_t *ctx)
+{
+    s5_session_t *client;
+    
+    client = (s5_session_t *)np_malloc(sizeof(*client));
+    if (client == NULL) {
+        return NP_ERROR;
+    }
+
+    ctx->client = client;
+    ctx->client->state = socks5_handshake;
+    
+    return NP_OK;
+}
+
 static void
 server_context_deinit(np_context_t *ctx)
 {
+    np_free(ctx->client);
+    np_free(ctx->upstream);
+    np_free(ctx->client_addr);
+    np_free(ctx->client_ip);
     np_free(ctx->remote_addr);
     np_free(ctx->remote_ip);
     np_free(ctx);
@@ -130,20 +151,21 @@ server_setup(struct nproxy_server *server)
     
     config_dump(server->cfg);
 
+    /*
     status = server_load_proxy_pool(server);
     if (status != NP_OK) {
         log_stderr("load proxy pool from redis failed.");
         return status;
     }
-    
     proxy_pool_dump(server->proxy_pool);
 
+    */
     return NP_OK;
 }
 
 static uv_buf_t *
 server_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf) {
-        *buf = uv_buf_init((char*) malloc(suggested_size), suggested_size);
+        *buf = uv_buf_init((char*) np_malloc(suggested_size), suggested_size);
         np_assert(buf->base != NULL);
         return buf;
 }
@@ -231,16 +253,17 @@ static void
 server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
     np_context_t *ctx = stream->data;
-    np_assert((uv_stream_t *)&ctx->client == stream);
+    s5_session_t *client = ctx->client;
+    np_assert((uv_stream_t *)&client->handle == stream);
 
     if (nread < 0) {
         if (nread != UV_EOF) {
             UV_SHOW_ERROR(nread, "read error");
         }
-        uv_close((uv_handle_t *)&ctx->client, (uv_close_cb)server_on_close);
+        uv_close((uv_handle_t *)&client->handle, (uv_close_cb)server_on_close);
         return;
     } else {
-        log_stdout(buf->base);
+        socks5_do_next(client, buf->base, nread);
     }
     np_free(buf->base);
 }
@@ -250,38 +273,47 @@ static void
 server_on_connect(uv_stream_t *us, int status)
 {
     int err;
-    np_status_t state;
+    np_status_t st;
     np_context_t *ctx;
+    s5_session_t *client;
     
     if (status != 0) {
         UV_SHOW_ERROR(status, "libuv on connect");
         return;
     }
-    
+
     ctx = (np_context_t *)np_malloc(sizeof(*ctx));
     if (ctx == NULL) {
-        return;
+        return ;
     }
 
-    uv_tcp_init(us->loop, &ctx->client);
+    st = server_context_init(ctx);
+    if (st != NP_OK) {
+        return ;
+    }
+
+    client = ctx->client;
+
+    uv_tcp_init(us->loop, &ctx->client->handle);
+    uv_timer_init(us->loop, &ctx->client->timer);
     
-    err = uv_accept((uv_stream_t *)us, (uv_stream_t *)&ctx->client);
+    err = uv_accept((uv_stream_t *)us, (uv_stream_t *)&client->handle);
     if (err) {
         UV_SHOW_ERROR(err, "libuv on accept");
         return;
     }
     
-    ctx->remote_addr = server_get_remote_addr((uv_stream_t *)&ctx->client);
-    ctx->remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)ctx->remote_addr);
+    ctx->client_addr = server_get_remote_addr((uv_stream_t *)&client->handle);
+    ctx->client_ip = server_sockaddr_to_str((struct sockaddr_storage *)ctx->client_addr);
     
-    ctx->client.data = ctx;
+    client->handle.data = ctx;
 
-    err = uv_read_start((uv_stream_t *)&ctx->client, (uv_alloc_cb)server_alloc_cb, (uv_read_cb)server_on_read);
+    err = uv_read_start((uv_stream_t *)&client->handle, (uv_alloc_cb)server_alloc_cb, (uv_read_cb)server_on_read);
     if (err) {
         UV_SHOW_ERROR(err, "libuv read start");
     }
     
-    log_debug("Aceepted connect from %s", ctx->remote_ip);
+    log_debug("Aceepted connect from %s", ctx->client_ip);
 }
 
 void

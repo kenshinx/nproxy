@@ -58,9 +58,13 @@ struct nproxy_server {
     unsigned        debug:1;
 }; 
 
+
+
 typedef struct nproxy_context {
-    uv_tcp_t                client;
-    union proxy_handler     handler;
+    s5_session_t            *client;
+    s5_session_t            *upstream;          
+    struct sockaddr         *client_addr;
+    char                    *client_ip;
     struct sockaddr         *remote_addr;
     char                    *remote_ip;
 } np_context_t;

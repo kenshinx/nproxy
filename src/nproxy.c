@@ -13,6 +13,14 @@
 #include "log.h"
 #include "server.h"
 
+/*
+ *        s5         s5 
+ * client --> nproxy --> proxy --> remote 
+ *    ^         | ^          |
+ *    |_ _ _ _  v | _ _ _ _  v
+ *               
+ */
+
 
 static void
 np_show_usage(void)
