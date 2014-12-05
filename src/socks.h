@@ -9,6 +9,9 @@
 #include <stdint.h>
 #include <uv.h>
 
+
+#define SOCKS5_SUPPORT_VERSION 5
+
 struct socks5_handler {
     uint8_t     protocol;
     uint8_t     version;
@@ -17,8 +20,11 @@ struct socks5_handler {
 };
 
 typedef enum {
-    socks5_handshake,
-    socks5_handshake_auth,
+    SOCKS5_VERSION,
+    SOCKS5_NMETHODS,
+    SOCKS5_METHODS,
+    SOCKS5_HANDSHAKE,
+    SOCKS5_HANDSHAKE_AUTH,
 } s5_state_t;
 
 typedef struct socks5_session {
@@ -29,13 +35,13 @@ typedef struct socks5_session {
 
 
 typedef enum {
-    SOCKS_BAD_VERSION = -3,
-    SOCKS_BAD_CMD,
-    SOCKS_BAD_ATYP,
-    SOCKS_OK,
-    SOCKS_AUTH_SELECT,
-    SOCKS_AUTH_VERIFY,
-    SOCKS_EXEC_CMD
+    SOCKS5_BAD_VERSION = -3,
+    SOCKS5_BAD_CMD,
+    SOCKS5_BAD_ATYP,
+    SOCKS5_OK,
+    SOCKS5_AUTH_SELECT,
+    SOCKS5_AUTH_VERIFY,
+    SOCKS5_EXEC_CMD
 } s5_error_t;
 
 typedef enum {
@@ -58,8 +64,8 @@ typedef enum {
     SOCKS5_ATYP_IPV6 =      0X04,
 } s5_atyp_t;
 
-static s5_state_t socks5_do_handshake();
-static s5_state_t socks5_do_handshake_auth();
-void socks5_do_next(s5_session_t *sess, const char *data, ssize_t nread);
+static s5_state_t socks5_do_handshake(s5_session_t *sess, const char *data, ssize_t nread);
+static s5_state_t socks5_do_handshake_auth(s5_session_t *sess, const char *data, ssize_t nread);
+void socks5_do_next(s5_session_t *sess, uint8_t *buf, ssize_t nread);
 
 #endif
