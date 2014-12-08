@@ -3,7 +3,7 @@
 
 
 void 
-socks5_do_next(s5_session_t *sess, const char *data, ssize_t nread)
+socks5_do_next(s5_session_t *sess, const uint8_t *data, ssize_t nread)
 {   
     int new_state;
     
@@ -20,23 +20,23 @@ socks5_do_next(s5_session_t *sess, const char *data, ssize_t nread)
 
 
 static s5_state_t
-socks5_do_handshake(s5_session_t *sess, const char *data, ssize_t nread)
+socks5_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
     sess->state = SOCKS5_VERSION;
-    err = socks5_parse(sess, (uint8_t *)data, &nread);
-    return socks5_handshake_auth;
+    err = socks5_parse(sess, data, &nread);
+    return SOCKS5_HANDSHAKE_AUTH;
 }
 
 static s5_state_t
-socks5_do_handshake_auth(s5_session_t *sess, const char *data, ssize_t nread)
+socks5_do_handshake_auth(s5_session_t *sess, const uint8_t *data, ssize_t nread)
 {
     log_stdout("handshake auth called");
     return SOCKS5_HANDSHAKE_AUTH;
 }
 
 static s5_error_t
-socks5_parse(s5_session_t *sess, uint8_t *buf, ssize_t *nread)
+socks5_parse(s5_session_t *sess, const uint8_t *buf, ssize_t *nread)
 {
     int i = 0;
     uint8_t c;

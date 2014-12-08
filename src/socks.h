@@ -27,13 +27,6 @@ typedef enum {
     SOCKS5_HANDSHAKE_AUTH,
 } s5_state_t;
 
-typedef struct socks5_session {
-    s5_state_t      state;
-    uv_tcp_t        handle;
-    uv_timer_t      timer;
-} s5_session_t;
-
-
 typedef enum {
     SOCKS5_BAD_VERSION = -3,
     SOCKS5_BAD_CMD,
@@ -45,17 +38,17 @@ typedef enum {
 } s5_error_t;
 
 typedef enum {
-    SOCKS5_NO_AUTH =        0x00,
-    SOCKS5_AUTH_GSSAPI =    0X01,
-    SOCKS5_AUTH_PASSWORD =  0X02,
+    SOCKS5_NO_AUTH =        1 << 0,
+    SOCKS5_AUTH_GSSAPI =    1 << 1,
+    SOCKS5_AUTH_PASSWORD =  1 << 2,
     SOCKS5_AUTH_REFUSED =   0Xff,
 } s5_methods_t;
 
 
 typedef enum {
     SOCKS5_CMD_ACCEPT =     0X01,
-    SOCKS5_CMD_BIND =       0X02,
-    SOCKS5_CMD_UDP_ASSOCIATE = 0X03,
+    SOCKS5_CMD_BIND,
+    SOCKS5_CMD_UDP_ASSOCIATE,
 } s5_cmd_t;
 
 typedef enum {
@@ -64,8 +57,18 @@ typedef enum {
     SOCKS5_ATYP_IPV6 =      0X04,
 } s5_atyp_t;
 
-static s5_state_t socks5_do_handshake(s5_session_t *sess, const char *data, ssize_t nread);
-static s5_state_t socks5_do_handshake_auth(s5_session_t *sess, const char *data, ssize_t nread);
-void socks5_do_next(s5_session_t *sess, uint8_t *buf, ssize_t nread);
+typedef struct socks5_session {
+    s5_state_t      state;
+    uv_tcp_t        handle;
+    uv_timer_t      timer;
+    s5_methods_t    methods;
+    s5_cmd_t        cmd;
+    s5_atyp_t       atyp;
+} s5_session_t;
+
+static s5_error_t socks5_parse(s5_session_t *sess, const uint8_t *buf, ssize_t *nread);
+static s5_state_t socks5_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread);
+static s5_state_t socks5_do_handshake_auth(s5_session_t *sess, const uint8_t *data, ssize_t nread);
+void socks5_do_next(s5_session_t *sess, const uint8_t *buf, ssize_t nread);
 
 #endif

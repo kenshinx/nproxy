@@ -15,9 +15,9 @@
 
 /*
  *        s5         s5 
- * client --> nproxy --> proxy --> remote 
- *    ^         | ^          |
- *    |_ _ _ _  v | _ _ _ _  v
+ * client --> nproxy --> (upstream)proxy --> remote 
+ *    ^         | ^             |
+ *    |_ _ _ _  v | _ _ _ _ _ _ v
  *               
  */
 

@@ -52,7 +52,7 @@ server_context_init(np_context_t *ctx)
     }
 
     ctx->client = client;
-    ctx->client->state = socks5_handshake;
+    ctx->client->state = SOCKS5_HANDSHAKE;
     
     return NP_OK;
 }
@@ -263,7 +263,7 @@ server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
         uv_close((uv_handle_t *)&client->handle, (uv_close_cb)server_on_close);
         return;
     } else {
-        socks5_do_next(client, buf->base, nread);
+        socks5_do_next(client, (uint8_t *)buf->base, nread);
     }
     np_free(buf->base);
 }
