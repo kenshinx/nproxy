@@ -4,6 +4,7 @@
 #include <uv.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <hiredis.h>
 
 #include "core.h"
 #include "array.h"
@@ -72,13 +73,38 @@ typedef struct nproxy_context {
 
 np_status_t server_init(struct nproxy_server *server);
 
+static np_status_t server_context_init(np_context_t *ctx);
+
+static void server_context_deinit(np_context_t *ctx);
+
+static np_status_t server_load_config(struct nproxy_server *server);
+
+static np_status_t server_load_proxy_pool(struct nproxy_server *server);
+
 np_status_t server_setup(struct nproxy_server *server);
+
+redisContext *server_redis_connect(struct nproxy_server *server);
+
+
+static uv_buf_t *server_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
 
 struct sockaddr *server_get_remote_addr(uv_stream_t *handler);
 
 char *server_sockaddr_to_str(struct sockaddr_storage *addr);
 
 char *server_get_remote_ip(uv_stream_t *handler);
+
+static void server_do_next(s5_session_t *sess, const uint8_t *buf, ssize_t nread);
+static s5_phase_t server_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread);
+static s5_phase_t server_do_handshake_auth(s5_session_t *sess, const uint8_t *data, ssize_t nread);
+static s5_phase_t server_do_kill(s5_session_t *sess);
+
+static void server_on_close(uv_handle_t *stream);
+static void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
+static void server_on_write(s5_session_t *sess, const char *data, unsigned int len);
+static void server_on_write_done(uv_write_t *req, int status);
+static void server_on_connect(uv_stream_t *us, int status);
+
 
 void server_run(struct nproxy_server *server);
 

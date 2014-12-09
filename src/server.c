@@ -45,15 +45,23 @@ static np_status_t
 server_context_init(np_context_t *ctx)
 {
     s5_session_t *client;
+    s5_session_t *upstream;
     
     client = (s5_session_t *)np_malloc(sizeof(*client));
     if (client == NULL) {
         return NP_ERROR;
     }
-
+    socks5_init(client);
     ctx->client = client;
-    ctx->client->state = SOCKS5_VERSION;
-    ctx->client->phase = SOCKS5_HANDSHAKE;
+    
+    upstream = (s5_session_t *)np_malloc(sizeof(*upstream));
+
+    if (upstream == NULL) {
+        return NP_ERROR;
+    }
+    socks5_init(upstream);
+    ctx->upstream = upstream;
+
     
     return NP_OK;
 }
@@ -164,7 +172,8 @@ server_setup(struct nproxy_server *server)
 }
 
 static uv_buf_t *
-server_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf) {
+server_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf) 
+{
         *buf = uv_buf_init((char*) np_malloc(suggested_size), suggested_size);
         log_debug("buf->len:%zd, buf->base: %s", buf->len, buf->base);
         np_assert(buf->base != NULL);
@@ -243,6 +252,79 @@ server_get_remote_ip(uv_stream_t *handler)
     return ip;
 }
 
+void 
+server_do_next(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+{   
+    int new_phase;
+
+    switch (sess->phase) {
+        case SOCKS5_HANDSHAKE:
+            new_phase = server_do_handshake(sess, data, nread);
+            break;
+        case SOCKS5_HANDSHAKE_AUTH:
+            new_phase = server_do_handshake_auth(sess, data, nread);
+            break;
+        case SOCKS5_DEAD:
+            log_error("socks5 dead");
+            break;
+    }    
+    sess->phase = new_phase;
+}
+
+
+static s5_phase_t
+server_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+{
+    s5_error_t err;
+
+    err = socks5_parse(sess, &data, &nread);
+    if (err != SOCKS5_OK) {
+        log_error("handshake error: %s", socks5_strerror(err));
+        return server_do_kill(sess);
+        //return SOCKS5_HANDSHAKE; 
+    }
+
+    if (nread != 0) {
+        log_error("junk in handshake");
+        return server_do_kill(sess);
+    }
+    
+    socks5_select_auth(sess);
+
+    switch(sess->method) {
+        case SOCKS5_NO_AUTH:
+            server_on_write(sess, "\5\0", 2);
+            break;
+        case SOCKS5_AUTH_PASSWORD:
+            server_on_write(sess, "\5\2", 2);
+            break;
+        defaut:
+            server_on_write(sess, "\5\377", 2);            
+            break;
+    }
+
+    
+    return SOCKS5_HANDSHAKE_AUTH;
+}
+
+static s5_phase_t
+server_do_handshake_auth(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+{
+    s5_error_t err;
+    
+    log_stdout("handshake auth called");
+
+    err = socks5_parse(sess, &data, &nread);
+    return SOCKS5_HANDSHAKE_AUTH;
+}
+
+
+static s5_phase_t
+server_do_kill(s5_session_t *sess)
+{
+    return  SOCKS5_DEAD;
+}
+
 static void
 server_on_close(uv_handle_t *stream)
 {
@@ -264,11 +346,39 @@ server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
         uv_close((uv_handle_t *)&client->handle, (uv_close_cb)server_on_close);
         return;
     } else {
-        socks5_do_next(client, (uint8_t *)buf->base, nread);
+        server_do_next(client, (uint8_t *)buf->base, nread);
     }
     np_free(buf->base);
 }
 
+static void 
+server_on_write(s5_session_t *sess, const char *data, unsigned int len)
+{
+
+    uv_buf_t buf;
+    int r;
+
+    buf.base = data;
+    buf.len = len;
+
+    r = uv_write(&sess->write_req, (uv_stream_t *)&sess->handle, &buf, 1 , server_on_write_done);
+
+    log_debug("write: %2X", data);
+
+    if (r < 0) {
+        UV_SHOW_ERROR(r, "write error");
+    }
+    
+    //server_timer_reset(s5_session_t *sess);
+    
+}
+
+
+static void
+server_on_write_done(uv_write_t *req, int status)
+{
+    return;
+}
 
 static void
 server_on_connect(uv_stream_t *us, int status)

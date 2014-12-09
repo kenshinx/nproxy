@@ -7,58 +7,21 @@ void socks5_init(s5_session_t *sess)
     sess->phase = SOCKS5_HANDSHAKE;
 }
 
-void 
-socks5_do_next(s5_session_t *sess, const uint8_t *data, ssize_t nread)
-{   
-    int new_phase;
-
-    switch (sess->phase) {
-        case SOCKS5_HANDSHAKE:
-            new_phase = socks5_do_handshake(sess, data, nread);
-            break;
-        case SOCKS5_HANDSHAKE_AUTH:
-            new_phase = socks5_do_handshake_auth(sess, data, nread);
-            break;
-        case SOCKS5_DEAD:
-            log_error("socks5 dead");
-            break;
-    }    
-    sess->phase = new_phase;
-}
-
-
-static s5_phase_t
-socks5_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+void
+socks5_select_auth(s5_session_t *sess)
 {
-    s5_error_t err;
-    err = socks5_parse(sess, &data, &nread);
-    if (err != SOCKS5_OK) {
-        log_error("handshake error: %s", socks5_strerror(err));
-        return socks5_do_kill(sess);
-        //return SOCKS5_HANDSHAKE; 
+    if (sess->methods & SOCKS5_NO_AUTH) {
+        sess->method = SOCKS5_NO_AUTH;
+    } else if (sess->methods & SOCKS5_AUTH_PASSWORD) {
+        sess->method = SOCKS5_AUTH_PASSWORD;
+    } else if (sess->methods & SOCKS5_AUTH_GSSAPI) {
+        sess->method = SOCKS5_AUTH_GSSAPI;
+    } else {
+        sess->method = SOCKS5_AUTH_REFUSED;
     }
-    if (nread != 0) {
-        log_error("junk in handshake");
-        return socks5_do_kill(sess);
-    }
-    return SOCKS5_HANDSHAKE_AUTH;
 }
 
-static s5_phase_t
-socks5_do_handshake_auth(s5_session_t *sess, const uint8_t *data, ssize_t nread)
-{
-    log_stdout("handshake auth called");
-    return SOCKS5_HANDSHAKE_AUTH;
-}
-
-
-static s5_phase_t
-socks5_do_kill(s5_session_t *sess)
-{
-    return  SOCKS5_DEAD;
-}
-
-static s5_error_t
+s5_error_t
 socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread)
 {
     s5_error_t err;
