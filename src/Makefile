@@ -33,7 +33,7 @@ NPROXY_CC=$(CC) $(FINAL_CFLAGS)
 NPROXY_LD=$(CC) $(FINAL_LDFLAGS)
 
 NPROXY_BIN=nproxy
-NPROXY_OBJ=nproxy.o config.o proxy.o util.o log.o array.o string.o socks.o server.o
+NPROXY_OBJ=nproxy.o config.o proxy.o util.o log.o array.o string.o socks5.o server.o
 
 nproxy.o: nproxy.c core.h config.h 
 config.o: config.c config.h core.h ../contrib/$(LIBYAML)/include/yaml.h
@@ -42,7 +42,7 @@ log.o: log.c log.h
 util.o: util.c util.h 
 array.o: array.c array.h 
 string.o: string.c string.h
-socks.o: socks.c socks.h
+socks5.o: socks5.c socks5.h
 server.o: server.c server.h ../contrib/$(HIREDIS)/hiredis.h ../contrib/$(LIBUV)/include/uv.h
 
 $(NPROXY_BIN): $(NPROXY_OBJ)

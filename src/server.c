@@ -15,7 +15,7 @@
 #include "config.h"
 #include "log.h"
 #include "proxy.h"
-#include "socks.h"
+#include "socks5.h"
 #include "server.h"
 
 np_status_t 
@@ -52,7 +52,8 @@ server_context_init(np_context_t *ctx)
     }
 
     ctx->client = client;
-    ctx->client->state = SOCKS5_HANDSHAKE;
+    ctx->client->state = SOCKS5_VERSION;
+    ctx->client->phase = SOCKS5_HANDSHAKE;
     
     return NP_OK;
 }
@@ -80,7 +81,6 @@ server_load_config(struct nproxy_server *server)
     }
     server->cfg = cfg;
     log_info("load config '%s' sucess", server->configfile);
-
     return NP_OK;
 }
 
@@ -166,6 +166,7 @@ server_setup(struct nproxy_server *server)
 static uv_buf_t *
 server_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf) {
         *buf = uv_buf_init((char*) np_malloc(suggested_size), suggested_size);
+        log_debug("buf->len:%zd, buf->base: %s", buf->len, buf->base);
         np_assert(buf->base != NULL);
         return buf;
 }
