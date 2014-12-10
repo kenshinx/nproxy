@@ -25,6 +25,7 @@ socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread)
         i += 1;
         log_debug("read %02X", c);
         switch (sess->state) {
+            /* handshake phase start */
             case SOCKS5_VERSION:
                 if (c != SOCKS5_SUPPORT_VERSION) {
                     err = SOCKS5_BAD_VERSION;
@@ -59,7 +60,9 @@ socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread)
                     goto out;
                 }
                 break;
+            /* handshake phase end */
 
+            /* sub negotiation start */
             case SOCKS5_AUTH_PW_VER:
                 if (c != SOCKS5_AUTH_PW_VERSION) {
                     err = SOCKS5_BAD_VERSION;
@@ -102,7 +105,9 @@ socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread)
                     goto out;
                 }
                 break;
+            /* sub negotiation end */
 
+            /* request  phase start */
             case SOCKS5_REQ_VER:
                 if (c != SOCKS5_SUPPORT_VERSION) {
                     err = SOCKS5_BAD_VERSION;
@@ -113,13 +118,13 @@ socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread)
 
             case SOCKS5_REQ_CMD:
                 switch (c) {
-                    case 0:
+                    case 1:
                         sess->cmd = SOCKS5_CMD_CONNECT;
                         break;
-                    case 1:
+                    case 2:
                         sess->cmd = SOCKS5_CMD_BIND;
                         break;
-                    case 2:
+                    case 3:
                         sess->cmd = SOCKS5_CMD_UDP_ASSOCIATE;
                         break;
                     default:
@@ -136,17 +141,53 @@ socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread)
             case SOCKS5_REQ_ATYP:
                 sess->__len = 0;
                 switch(c) {
-                    case 1:
+                    case 1:  /* IPV4 */
                         sess->atyp = SOCKS5_ATYP_IPV4;
-                        
+                        sess->alen = 4;
+                        sess->state = SOCKS5_REQ_DADDR;
+                        break;
+                    case 3: /* DOMAIN */
+                        sess->atyp = SOCKS5_ATYP_DOMAIN;
+                        sess->alen = 0;
+                        sess->state = SOCKS5_REQ_DDOMAIN;
+                        break;
+                    case 4: /* IPV6 */
+                        sess->atyp = SOCKS5_ATYP_IPV6;
+                        sess->alen = 16;
+                        sess->state = SOCKS5_REQ_DADDR;
+                        break;
                 }
-            
+                break;
 
-                
+            case SOCKS5_REQ_DDOMAIN:
+                sess->alen = c;  /* Hostname.  First byte is length. */
+                sess->state = SOCKS5_REQ_DADDR;
+                break;
+           
+            case SOCKS5_REQ_DADDR:
+                if (sess->__len < sess->alen) {
+                    sess->daddr[sess->__len] = c;
+                    sess->__len += 1;
+                }
+                if (sess->__len == sess->alen) {
+                    sess->daddr[sess->alen] = '\0';
+                    sess->state = SOCKS5_REQ_DPORT0;
+                }
+                break;
+
+            case SOCKS5_REQ_DPORT0:
+                sess->dport = c <<8;
+                sess->state = SOCKS5_REQ_DPORT1;
+                break;
+            
+            case SOCKS5_REQ_DPORT1:
+                sess->dport |= c;
+                err = SOCKS5_OK;
+                goto out;
+
+            /* request phase end*/
         }
     }
-
-    err = SOCKS5_OK;
 
 out:
     *data = p +i;

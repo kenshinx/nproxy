@@ -27,7 +27,7 @@ static void server_do_next(s5_session_t *sess, const uint8_t *buf, ssize_t nread
 static s5_phase_t server_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread);
 static s5_phase_t server_do_handshake_auth(s5_session_t *sess, const uint8_t *data, ssize_t nread);
 static s5_phase_t server_do_sub_negotiation(s5_session_t *sess, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_req_start(s5_session_t *sess, const uint8_t *data, ssize_t nread);
+static s5_phase_t server_do_request(s5_session_t *sess, const uint8_t *data, ssize_t nread);
 static s5_phase_t server_do_kill(s5_session_t *sess);
 
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
@@ -282,15 +282,14 @@ server_do_next(s5_session_t *sess, const uint8_t *data, ssize_t nread)
         case SOCKS5_SUB_NEGOTIATION:
             new_phase = server_do_sub_negotiation(sess, data, nread);
             break;
-        case SOCKS5_REQ_START:
-            new_phase = server_do_req_start(sess, data, nread);
+        case SOCKS5_REQUEST:
+            new_phase = server_do_request(sess, data, nread);
             break;
-        case SOCKS5_REQ_PARSE:
-            log_debug("reach socks req parse phase");
+        case SOCKS5_ALMOST_DEAD:
+            new_phase = server_do_kill(sess);
             break;
         case SOCKS5_DEAD:
             log_error("socks5 dead");
-            server_do_kill(sess);
             return;
     }    
     sess->phase = new_phase;
@@ -305,13 +304,13 @@ server_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread)
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("handshake error: %s", socks5_strerror(err));
-        return SOCKS5_DEAD;
+        return server_do_kill(sess);
         //return SOCKS5_HANDSHAKE; 
     }
 
     if (nread != 0) {
-        log_error("junk in handshake");
-        return SOCKS5_DEAD;
+        log_error("junk in handshake phase");
+        return server_do_kill(sess);
     }
     
     socks5_select_auth(sess);
@@ -319,13 +318,13 @@ server_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread)
     switch(sess->method) {
         case SOCKS5_NO_AUTH:
             server_on_write(sess, "\x05\x00", 2);
-            return SOCKS5_REQ_START;
+            return SOCKS5_REQUEST;
         case SOCKS5_AUTH_PASSWORD:
             server_on_write(sess, "\x05\x02", 2);
             return SOCKS5_SUB_NEGOTIATION;
         defaut:
             server_on_write(sess, "\x05\xff", 2);            
-            return SOCKS5_DEAD;
+            return server_do_kill(sess);
     }
 
     log_debug("handshake sucess.");
@@ -341,12 +340,12 @@ server_do_sub_negotiation(s5_session_t *sess, const uint8_t *data, ssize_t nread
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("sub negotiate error: %s", socks5_strerror(err));
-        return SOCKS5_DEAD;
+        return server_do_kill(sess);
     }
 
     if (nread != 0) {
-        log_error("junk in sub negotiation");
-        return SOCKS5_DEAD;
+        log_error("junk in sub negotiation phase");
+        return server_do_kill(sess);
     }
 
     log_debug("usename:%s, password:%s", sess->uname, sess->passwd);
@@ -358,24 +357,51 @@ server_do_sub_negotiation(s5_session_t *sess, const uint8_t *data, ssize_t nread
             (strcmp(server->cfg->server->password->data, sess->passwd) == 0)) {
         log_debug("sub negotiation sucess");
         server_on_write(sess, "\x01\x00", 2);
-        return SOCKS5_REQ_START;
+        return SOCKS5_REQUEST;
     } else {
         log_debug("sub negotiation failed");
         server_on_write(sess, "\x01\x01", 2);
-        return SOCKS5_DEAD;
+        return server_do_kill(sess);
     }
 
 }
 
 static s5_phase_t
-server_do_req_start(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+server_do_request(s5_session_t *sess, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
 
     sess->state = SOCKS5_REQ_VER;
 
     err = socks5_parse(sess, &data, &nread);
-    return SOCKS5_REQ_PARSE;
+    if (err != SOCKS5_OK) {
+        log_error("request  error: %s", socks5_strerror(err));
+        return server_do_kill(sess);
+    }
+
+    if (nread != 0 ){
+        log_error("junk in request phase");
+        return server_do_kill(sess);
+    }
+
+    if (sess->cmd == SOCKS5_CMD_BIND) {
+        log_warn("bind request not supported");
+        return server_do_kill(sess);
+    }
+    
+    if (sess->cmd == SOCKS5_CMD_UDP_ASSOCIATE) {
+        log_warn("udp associate request not supported");
+        return server_do_kill(sess);
+    }
+    
+    if (sess->atyp == SOCKS5_ATYP_IPV4) {
+        
+        log_debug("daddr:%s, dport:%d", sess->daddr, sess->dport);
+    }
+
+
+    log_debug("request sucess");
+    return SOCKS5_REPLY;
 }
 
 
@@ -385,6 +411,7 @@ server_do_kill(s5_session_t *sess)
     uv_close((uv_handle_t* )&sess->handle, (uv_close_cb) server_on_close);
     uv_close((uv_handle_t*)&sess->timer, (uv_close_cb) server_on_close);
     log_debug("do kill");
+    return SOCKS5_DEAD;
 }
 
 static void

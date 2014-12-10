@@ -49,15 +49,18 @@ typedef enum {
     SOCKS5_REQ_RSV,
     SOCKS5_REQ_ATYP,
     SOCKS5_REQ_DADDR,
-    SOCKS5_REQ_DPORT
+    SOCKS5_REQ_DDOMAIN,
+    SOCKS5_REQ_DPORT0,
+    SOCKS5_REQ_DPORT1,
     
 } s5_state_t;
 
 typedef enum {
     SOCKS5_HANDSHAKE,
     SOCKS5_SUB_NEGOTIATION,
-    SOCKS5_REQ_START,
-    SOCKS5_REQ_PARSE,
+    SOCKS5_REQUEST,
+    SOCKS5_REPLY,
+    SOCKS5_CONN,
     SOCKS5_ALMOST_DEAD,
     SOCKS5_DEAD,
 } s5_phase_t;
@@ -72,7 +75,7 @@ typedef enum {
 
 
 typedef enum {
-    SOCKS5_CMD_ACCEPT =     0X01,
+    SOCKS5_CMD_CONNECT =     0X01,
     SOCKS5_CMD_BIND,
     SOCKS5_CMD_UDP_ASSOCIATE,
 } s5_cmd_t;
@@ -96,6 +99,9 @@ typedef struct socks5_session {
     uint8_t         passwd[256];
     s5_cmd_t        cmd;
     s5_atyp_t       atyp;
+    uint8_t         alen;
+    uint8_t         daddr[256]; /* 256 for atyp is domain */
+    uint16_t        dport; 
     uv_tcp_t        handle;
     uv_timer_t      timer;
     uv_write_t      write_req;
