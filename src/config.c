@@ -37,6 +37,16 @@ config_server_init(void)
 
     server->port = NPROXY_DEFAULT_PORT; 
     server->daemon = NPROXY_DEFAULT_DAEMONIZE;
+
+    server->username = string_null();
+    if (server->username == NULL) {
+        return NULL;
+    }
+
+    server->password = string_null();
+    if (server->password == NULL) {
+        return NULL;
+    }  
     
     return server;
 }
@@ -47,6 +57,8 @@ config_server_deinit(struct config_server *server)
     string_deinit(server->listen);
     string_deinit(server->pfile);
     string_deinit(server->redis_key);
+    string_deinit(server->username);
+    string_deinit(server->password);
     np_free(server);
 }
 
@@ -394,6 +406,10 @@ config_parse_mapping(struct config *cfg, np_string *section, np_string *key, np_
             string_copy(cfg->server->pfile, value);
         } else if (strcmp(key->data, "redis_key") == 0) {
             string_copy(cfg->server->redis_key, value);  
+        } else if (strcmp(key->data, "username") == 0) {
+            string_copy(cfg->server->username, value);
+        } else if (strcmp(key->data, "password") == 0) {
+            string_copy(cfg->server->password, value);
         } else {
             log_error("Unknow token: '%s: %s' in [server]", key->data, value->data);
             return NP_ERROR;
@@ -558,6 +574,8 @@ config_dump(struct config *cfg)
     log_notice("\t daemon: %d", cfg->server->daemon);
     log_notice("\t pfile: %s", cfg->server->pfile->data);
     log_notice("\t redis_key: %s", cfg->server->redis_key->data);
+    log_notice("\t username: %s", cfg->server->username->data);
+    log_notice("\t password: %s", cfg->server->password->data);
 
 
     log_notice("log");

@@ -28,6 +28,8 @@ struct config_server {
     unsigned        daemon:1;
     np_string       *pfile;
     np_string       *redis_key;
+    np_string       *username;
+    np_string       *password;
 };
 
 struct config_log {

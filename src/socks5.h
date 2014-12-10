@@ -1,6 +1,11 @@
-/** Socks v5 protocol implementaion
+/* 
+ * Socks v5 protocol implementaion
  * RFC(1928)
  * http://www.ietf.org/rfc/rfc1928.txt
+ *
+ * Username/Password authentication for socks5
+ * RFC(1929)
+ * http://www.ietf.org/rfc/rfc1929.txt
 */
 
 #ifndef _NPROXY_SOCKS_H_
@@ -10,7 +15,8 @@
 #include <uv.h>
 
 
-#define SOCKS5_SUPPORT_VERSION 0X05 //socks v5
+#define SOCKS5_SUPPORT_VERSION 0X05
+#define SOCKS5_AUTH_PW_VERSION 0X01 
 
 
 #define SOCKS5_ERR_MAP(V)                                                           \
@@ -33,12 +39,25 @@ typedef enum {
     SOCKS5_VERSION,
     SOCKS5_NMETHODS,
     SOCKS5_METHODS,
-    SOCKS5_AUTH_VER,
+    SOCKS5_AUTH_PW_VER,
+    SOCKS5_AUTH_PW_ULEN,
+    SOCKS5_AUTH_PW_UNAME,
+    SOCKS5_AUTH_PW_PLEN,
+    SOCKS5_AUTH_PW_PASSWD,
+    SOCKS5_REQ_VER,
+    SOCKS5_REQ_CMD,
+    SOCKS5_REQ_RSV,
+    SOCKS5_REQ_ATYP,
+    SOCKS5_REQ_DADDR,
+    SOCKS5_REQ_DPORT
+    
 } s5_state_t;
 
 typedef enum {
     SOCKS5_HANDSHAKE,
-    SOCKS5_HANDSHAKE_AUTH,
+    SOCKS5_SUB_NEGOTIATION,
+    SOCKS5_REQ_START,
+    SOCKS5_REQ_PARSE,
     SOCKS5_ALMOST_DEAD,
     SOCKS5_DEAD,
 } s5_phase_t;
@@ -65,16 +84,21 @@ typedef enum {
 } s5_atyp_t;
 
 typedef struct socks5_session {
+    size_t          __len;
     s5_state_t      state;
     s5_phase_t      phase;
-    uv_tcp_t        handle;
-    uv_timer_t      timer;
-    uv_write_t      write_req;
     uint8_t         nmethods;
     uint8_t         methods;
     s5_methods_t    method;
+    uint8_t         ulen;
+    uint8_t         uname[256];
+    uint8_t         plen;
+    uint8_t         passwd[256];
     s5_cmd_t        cmd;
     s5_atyp_t       atyp;
+    uv_tcp_t        handle;
+    uv_timer_t      timer;
+    uv_write_t      write_req;
 } s5_session_t;
 
 s5_error_t socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread);
