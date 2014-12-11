@@ -58,6 +58,33 @@ typedef union {
     char buf[2048];  /* Scratch space. Used to read data into. */
 } np_addr_t;
 
+typedef enum {
+    SOCKS5_HANDSHAKE,
+    SOCKS5_SUB_NEGOTIATION,
+    SOCKS5_REQUEST,
+    SOCKS5_REPLY,
+    SOCKS5_CONN,
+    SOCKS5_ALMOST_DEAD,
+    SOCKS5_DEAD,
+} np_phase_t;
+
+
+typedef struct nproxy_connect 
+{
+    s5_session_t    *sess;
+    np_phase_t      phase;
+    uv_tcp_t        handle;
+    uv_timer_t      timer;
+    uv_write_t      write_req;
+    np_addr_t       srcaddr;
+    np_addr_t       dstaddr;
+} np_connect_t;
+
+typedef struct nproxy_context {
+    struct nproxy_server    *server;
+    np_connect_t            *client;
+    np_connect_t            *upstream;          
+} np_context_t;
 
 struct nproxy_server {
     uv_tcp_t        *us; /* libuv tcp server */
@@ -69,25 +96,6 @@ struct nproxy_server {
     pid_t           pid;
     unsigned        debug:1;
 }; 
-
-typedef struct nproxy_connect 
-{
-    s5_session_t    *sess;
-    uv_tcp_t        handle;
-    uv_timer_t      timer;
-    uv_write_t      write_req;
-    np_addr_t       srcaddr;
-    np_addr_t       dstaddr;
-} np_connect_t;
-
-
-
-typedef struct nproxy_context {
-    struct nproxy_server    *server;
-    np_connect_t            *client;
-    np_connect_t            *upstream;          
-} np_context_t;
-
 
 np_status_t server_init(struct nproxy_server *server);
 np_status_t server_setup(struct nproxy_server *server);

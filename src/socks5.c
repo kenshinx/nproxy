@@ -4,7 +4,6 @@
 void socks5_init(s5_session_t *sess)
 {
     sess->state = SOCKS5_VERSION;
-    sess->phase = SOCKS5_HANDSHAKE;
 }
 
 s5_error_t

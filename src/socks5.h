@@ -55,16 +55,6 @@ typedef enum {
     
 } s5_state_t;
 
-typedef enum {
-    SOCKS5_HANDSHAKE,
-    SOCKS5_SUB_NEGOTIATION,
-    SOCKS5_REQUEST,
-    SOCKS5_REPLY,
-    SOCKS5_CONN,
-    SOCKS5_ALMOST_DEAD,
-    SOCKS5_DEAD,
-} s5_phase_t;
-
 
 typedef enum {
     SOCKS5_NO_AUTH =        1 << 0,
@@ -89,7 +79,6 @@ typedef enum {
 typedef struct socks5_session {
     size_t          __len;
     s5_state_t      state;
-    s5_phase_t      phase;
     uint8_t         nmethods;
     uint8_t         methods;
     s5_methods_t    method;

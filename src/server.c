@@ -18,6 +18,8 @@
 #include "socks5.h"
 #include "server.h"
 
+static np_status_t server_connect_init(np_connect_t *conn);
+static void server_connect_deinit(np_connect_t *conn);
 static np_status_t server_context_init(np_context_t *ctx);
 static void server_context_deinit(np_context_t *ctx);
 static np_status_t server_load_config(struct nproxy_server *server);
@@ -27,11 +29,11 @@ static char *server_sockaddr_to_str(struct sockaddr_storage *addr);
 static char *server_get_remote_ip(uv_stream_t *handler);
 
 static void server_do_next(np_connect_t *conn, const uint8_t *buf, ssize_t nread);
-static s5_phase_t server_do_handshake(np_connect_t *conn, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_handshake_auth(np_connect_t *conn, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_kill(np_connect_t *conn);
+static np_phase_t server_do_handshake(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_do_handshake_auth(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_do_kill(np_connect_t *conn);
 
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_on_close(uv_handle_t *stream);
@@ -62,40 +64,59 @@ server_init(struct nproxy_server *server)
     return NP_OK;
 }
 
+static np_status_t 
+server_connect_init(np_connect_t *conn) 
+{
+    s5_session_t *sess;
+
+    sess = (s5_session_t *)np_malloc(sizeof(*sess));
+    if (sess == NULL) {
+        return NP_ERROR;
+    }
+    conn->sess = sess;
+
+    socks5_init(conn->sess);
+    conn->phase = SOCKS5_HANDSHAKE;
+
+    return NP_OK;
+
+}
+
+static void
+server_connect_deinit(np_connect_t *conn)
+{
+    np_free(conn->sess);
+    np_free(conn);
+}
+
 
 static np_status_t
 server_context_init(np_context_t *ctx)
 {
     np_connect_t *client;
     np_connect_t *upstream;
-    s5_session_t *sess;
+    np_status_t status;
     
     client = (np_connect_t *)np_malloc(sizeof(*client));
     if (client == NULL) {
         return NP_ERROR;
     }
 
-    sess = (s5_session_t *)np_malloc(sizeof(*sess));
-    if (sess == NULL) {
+    status = server_connect_init(client);
+    if (status != NP_OK) {
         return NP_ERROR;
     }
-
-    client->sess = sess;
-    socks5_init(client->sess);
     ctx->client = client;
 
     upstream = (s5_session_t *)np_malloc(sizeof(*upstream));
-
     if (upstream == NULL) {
         return NP_ERROR;
     }
 
-    sess = (s5_session_t *)np_malloc(sizeof(*sess));
-    if (sess == NULL) {
+    status = server_connect_init(upstream);
+    if (status != NP_OK) {
         return NP_ERROR;
     }
-    upstream->sess = sess;
-    socks5_init(upstream->sess);
     ctx->upstream = upstream;
     
     return NP_OK;
@@ -104,9 +125,7 @@ server_context_init(np_context_t *ctx)
 static void
 server_context_deinit(np_context_t *ctx)
 {
-    np_free(ctx->client->sess);
     np_free(ctx->client);
-    np_free(ctx->upstream->sess);
     np_free(ctx->upstream);
     np_free(ctx);
 }
@@ -285,9 +304,7 @@ server_do_next(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {   
     int new_phase;
 
-    s5_session_t *sess = conn->sess;
-
-    switch (sess->phase) {
+    switch (conn->phase) {
         case SOCKS5_HANDSHAKE:
             new_phase = server_do_handshake(conn, data, nread);
             break;
@@ -304,11 +321,11 @@ server_do_next(np_connect_t *conn, const uint8_t *data, ssize_t nread)
             log_error("socks5 dead");
             return;
     }    
-    sess->phase = new_phase;
+    conn->phase = new_phase;
 }
 
 
-static s5_phase_t
+static np_phase_t
 server_do_handshake(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
@@ -344,7 +361,7 @@ server_do_handshake(np_connect_t *conn, const uint8_t *data, ssize_t nread)
     log_debug("handshake sucess.");
 }
 
-static s5_phase_t
+static np_phase_t
 server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
@@ -382,7 +399,7 @@ server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread
 
 }
 
-static s5_phase_t
+static np_phase_t
 server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
@@ -423,7 +440,7 @@ server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 }
 
 
-static s5_phase_t
+static np_phase_t
 server_do_kill(np_connect_t *conn)
 {
     uv_close((uv_handle_t* )&conn->handle, (uv_close_cb) server_on_close);
