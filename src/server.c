@@ -101,7 +101,6 @@ server_context_init(np_context_t *ctx)
     if (client == NULL) {
         return NP_ERROR;
     }
-
     status = server_connect_init(client);
     if (status != NP_OK) {
         return NP_ERROR;
@@ -112,7 +111,6 @@ server_context_init(np_context_t *ctx)
     if (upstream == NULL) {
         return NP_ERROR;
     }
-
     status = server_connect_init(upstream);
     if (status != NP_OK) {
         return NP_ERROR;
@@ -430,7 +428,6 @@ server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread)
     }
     
     if (sess->atyp == SOCKS5_ATYP_IPV4) {
-        
         log_debug("daddr:%s, dport:%d", sess->daddr, sess->dport);
     }
 
