@@ -48,6 +48,17 @@ union proxy_handler {
 };
 
 
+typedef union {
+    uv_getaddrinfo_t addrinfo_req;
+    uv_connect_t connect_req;
+    uv_req_t req;
+    struct sockaddr_in6 addr6;
+    struct sockaddr_in addr4;
+    struct sockaddr addr;
+    char buf[2048];  /* Scratch space. Used to read data into. */
+} np_addr_t;
+
+
 struct nproxy_server {
     uv_tcp_t        *us; /* libuv tcp server */
     uv_loop_t       *loop; /* libuv loop */
@@ -59,25 +70,28 @@ struct nproxy_server {
     unsigned        debug:1;
 }; 
 
+typedef struct nproxy_connect 
+{
+    s5_session_t    *sess;
+    uv_tcp_t        handle;
+    uv_timer_t      timer;
+    uv_write_t      write_req;
+    np_addr_t       srcaddr;
+    np_addr_t       dstaddr;
+} np_connect_t;
+
 
 
 typedef struct nproxy_context {
     struct nproxy_server    *server;
-    s5_session_t            *client;
-    s5_session_t            *upstream;          
-    struct sockaddr         *client_addr;
-    char                    *client_ip;
-    struct sockaddr         *remote_addr;
-    char                    *remote_ip;
+    np_connect_t            *client;
+    np_connect_t            *upstream;          
 } np_context_t;
 
 
 np_status_t server_init(struct nproxy_server *server);
 np_status_t server_setup(struct nproxy_server *server);
 redisContext *server_redis_connect(struct nproxy_server *server);
-struct sockaddr *server_get_remote_addr(uv_stream_t *handler);
-char *server_sockaddr_to_str(struct sockaddr_storage *addr);
-char *server_get_remote_ip(uv_stream_t *handler);
 void server_run(struct nproxy_server *server);
 
 #endif

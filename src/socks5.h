@@ -102,9 +102,6 @@ typedef struct socks5_session {
     uint8_t         alen;
     uint8_t         daddr[256]; /* 256 for atyp is domain */
     uint16_t        dport; 
-    uv_tcp_t        handle;
-    uv_timer_t      timer;
-    uv_write_t      write_req;
 } s5_session_t;
 
 s5_error_t socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread);

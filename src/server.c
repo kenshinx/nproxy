@@ -22,18 +22,21 @@ static np_status_t server_context_init(np_context_t *ctx);
 static void server_context_deinit(np_context_t *ctx);
 static np_status_t server_load_config(struct nproxy_server *server);
 static np_status_t server_load_proxy_pool(struct nproxy_server *server);
+static np_status_t server_get_remote_addr(uv_stream_t *handler, struct sockaddr *addr);
+static char *server_sockaddr_to_str(struct sockaddr_storage *addr);
+static char *server_get_remote_ip(uv_stream_t *handler);
 
-static void server_do_next(s5_session_t *sess, const uint8_t *buf, ssize_t nread);
-static s5_phase_t server_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_handshake_auth(s5_session_t *sess, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_sub_negotiation(s5_session_t *sess, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_request(s5_session_t *sess, const uint8_t *data, ssize_t nread);
-static s5_phase_t server_do_kill(s5_session_t *sess);
+static void server_do_next(np_connect_t *conn, const uint8_t *buf, ssize_t nread);
+static s5_phase_t server_do_handshake(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static s5_phase_t server_do_handshake_auth(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static s5_phase_t server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static s5_phase_t server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static s5_phase_t server_do_kill(np_connect_t *conn);
 
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_on_close(uv_handle_t *stream);
 static void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
-static void server_on_write(s5_session_t *sess, const char *data, unsigned int len);
+static void server_on_write(np_connect_t *conn, const char *data, unsigned int len);
 static void server_on_write_done(uv_write_t *req, int status);
 static void server_on_connect(uv_stream_t *us, int status);
 
@@ -63,24 +66,37 @@ server_init(struct nproxy_server *server)
 static np_status_t
 server_context_init(np_context_t *ctx)
 {
-    s5_session_t *client;
-    s5_session_t *upstream;
+    np_connect_t *client;
+    np_connect_t *upstream;
+    s5_session_t *sess;
     
-    client = (s5_session_t *)np_malloc(sizeof(*client));
+    client = (np_connect_t *)np_malloc(sizeof(*client));
     if (client == NULL) {
         return NP_ERROR;
     }
-    socks5_init(client);
+
+    sess = (s5_session_t *)np_malloc(sizeof(*sess));
+    if (sess == NULL) {
+        return NP_ERROR;
+    }
+
+    client->sess = sess;
+    socks5_init(client->sess);
     ctx->client = client;
-    
+
     upstream = (s5_session_t *)np_malloc(sizeof(*upstream));
 
     if (upstream == NULL) {
         return NP_ERROR;
     }
-    socks5_init(upstream);
-    ctx->upstream = upstream;
 
+    sess = (s5_session_t *)np_malloc(sizeof(*sess));
+    if (sess == NULL) {
+        return NP_ERROR;
+    }
+    upstream->sess = sess;
+    socks5_init(upstream->sess);
+    ctx->upstream = upstream;
     
     return NP_OK;
 }
@@ -88,12 +104,10 @@ server_context_init(np_context_t *ctx)
 static void
 server_context_deinit(np_context_t *ctx)
 {
+    np_free(ctx->client->sess);
     np_free(ctx->client);
+    np_free(ctx->upstream->sess);
     np_free(ctx->upstream);
-    np_free(ctx->client_addr);
-    np_free(ctx->client_ip);
-    np_free(ctx->remote_addr);
-    np_free(ctx->remote_ip);
     np_free(ctx);
 }
 
@@ -198,30 +212,24 @@ server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf
         return buf;
 }
 
-struct sockaddr *
-server_get_remote_addr(uv_stream_t *handler)
+static np_status_t
+server_get_remote_addr(uv_stream_t *handler, struct sockaddr *addr)
 {
-    struct sockaddr *remote_addr;
-    int namelen;
+    int len;
     int err;
 
-    remote_addr = np_malloc(sizeof(*remote_addr));
-    if (remote_addr == NULL) {
-        return NULL;
-    }    
-    
-    namelen = sizeof(*remote_addr);
+    len = sizeof(*addr);
 
-    err = uv_tcp_getpeername((uv_tcp_t *)handler, remote_addr, &namelen);
+    err = uv_tcp_getpeername((uv_tcp_t *)handler, addr, &len);
     if (err != 0) {
         log_error("get remote ip failed");
-        return NULL;
+        return NP_ERROR;
     }
 
-    return remote_addr; 
+    return NP_OK; 
 }
 
-char *
+static char *
 server_sockaddr_to_str(struct sockaddr_storage *addr)
 {
     char *ip;
@@ -255,12 +263,14 @@ server_sockaddr_to_str(struct sockaddr_storage *addr)
     return ip;
 }
 
-char *
+static char *
 server_get_remote_ip(uv_stream_t *handler)
 {
     struct sockaddr *remote_addr;
     char *ip;
-    remote_addr = server_get_remote_addr(handler);
+
+    remote_addr = np_malloc(sizeof(*remote_addr));
+    server_get_remote_addr(handler, remote_addr);
     if (remote_addr == NULL) {
         return NULL;
     }
@@ -270,23 +280,25 @@ server_get_remote_ip(uv_stream_t *handler)
     return ip;
 }
 
-void 
-server_do_next(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+static void 
+server_do_next(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {   
     int new_phase;
 
+    s5_session_t *sess = conn->sess;
+
     switch (sess->phase) {
         case SOCKS5_HANDSHAKE:
-            new_phase = server_do_handshake(sess, data, nread);
+            new_phase = server_do_handshake(conn, data, nread);
             break;
         case SOCKS5_SUB_NEGOTIATION:
-            new_phase = server_do_sub_negotiation(sess, data, nread);
+            new_phase = server_do_sub_negotiation(conn, data, nread);
             break;
         case SOCKS5_REQUEST:
-            new_phase = server_do_request(sess, data, nread);
+            new_phase = server_do_request(conn, data, nread);
             break;
         case SOCKS5_ALMOST_DEAD:
-            new_phase = server_do_kill(sess);
+            new_phase = server_do_kill(conn);
             break;
         case SOCKS5_DEAD:
             log_error("socks5 dead");
@@ -297,101 +309,107 @@ server_do_next(s5_session_t *sess, const uint8_t *data, ssize_t nread)
 
 
 static s5_phase_t
-server_do_handshake(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+server_do_handshake(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
+
+    s5_session_t *sess = conn->sess;
 
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("handshake error: %s", socks5_strerror(err));
-        return server_do_kill(sess);
+        return server_do_kill(conn);
         //return SOCKS5_HANDSHAKE; 
     }
 
     if (nread != 0) {
         log_error("junk in handshake phase");
-        return server_do_kill(sess);
+        return server_do_kill(conn);
     }
     
     socks5_select_auth(sess);
 
     switch(sess->method) {
         case SOCKS5_NO_AUTH:
-            server_on_write(sess, "\x05\x00", 2);
+            server_on_write(conn, "\x05\x00", 2);
             return SOCKS5_REQUEST;
         case SOCKS5_AUTH_PASSWORD:
-            server_on_write(sess, "\x05\x02", 2);
+            server_on_write(conn, "\x05\x02", 2);
             return SOCKS5_SUB_NEGOTIATION;
         defaut:
-            server_on_write(sess, "\x05\xff", 2);            
-            return server_do_kill(sess);
+            server_on_write(conn, "\x05\xff", 2);            
+            return server_do_kill(conn);
     }
 
     log_debug("handshake sucess.");
 }
 
 static s5_phase_t
-server_do_sub_negotiation(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
+
+    s5_session_t *sess = conn->sess;
 
     sess->state = SOCKS5_AUTH_PW_VER; 
     
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("sub negotiate error: %s", socks5_strerror(err));
-        return server_do_kill(sess);
+        return server_do_kill(conn);
     }
 
     if (nread != 0) {
         log_error("junk in sub negotiation phase");
-        return server_do_kill(sess);
+        return server_do_kill(conn);
     }
 
     log_debug("usename:%s, password:%s", sess->uname, sess->passwd);
 
-    np_context_t *ctx = sess->handle.data;
+    np_context_t *ctx = conn->handle.data;
     struct nproxy_server *server = ctx->server;
 
     if ((strcmp(server->cfg->server->username->data, sess->uname) == 0) && \
             (strcmp(server->cfg->server->password->data, sess->passwd) == 0)) {
         log_debug("sub negotiation sucess");
-        server_on_write(sess, "\x01\x00", 2);
+        server_on_write(conn, "\x01\x00", 2);
         return SOCKS5_REQUEST;
     } else {
         log_debug("sub negotiation failed");
-        server_on_write(sess, "\x01\x01", 2);
-        return server_do_kill(sess);
+        server_on_write(conn, "\x01\x01", 2);
+        return server_do_kill(conn);
     }
 
 }
 
 static s5_phase_t
-server_do_request(s5_session_t *sess, const uint8_t *data, ssize_t nread)
+server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
+
+    s5_session_t *sess = conn->sess;
 
     sess->state = SOCKS5_REQ_VER;
 
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("request  error: %s", socks5_strerror(err));
-        return server_do_kill(sess);
+        return server_do_kill(conn);
     }
 
     if (nread != 0 ){
         log_error("junk in request phase");
-        return server_do_kill(sess);
+        return server_do_kill(conn);
     }
 
     if (sess->cmd == SOCKS5_CMD_BIND) {
         log_warn("bind request not supported");
-        return server_do_kill(sess);
+        return server_do_kill(conn);
     }
     
     if (sess->cmd == SOCKS5_CMD_UDP_ASSOCIATE) {
         log_warn("udp associate request not supported");
-        return server_do_kill(sess);
+        return server_do_kill(conn);
     }
     
     if (sess->atyp == SOCKS5_ATYP_IPV4) {
@@ -406,10 +424,10 @@ server_do_request(s5_session_t *sess, const uint8_t *data, ssize_t nread)
 
 
 static s5_phase_t
-server_do_kill(s5_session_t *sess)
+server_do_kill(np_connect_t *conn)
 {
-    uv_close((uv_handle_t* )&sess->handle, (uv_close_cb) server_on_close);
-    uv_close((uv_handle_t*)&sess->timer, (uv_close_cb) server_on_close);
+    uv_close((uv_handle_t* )&conn->handle, (uv_close_cb) server_on_close);
+    uv_close((uv_handle_t*)&conn->timer, (uv_close_cb) server_on_close);
     log_debug("do kill");
     return SOCKS5_DEAD;
 }
@@ -428,7 +446,7 @@ static void
 server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
     np_context_t *ctx = stream->data;
-    s5_session_t *client = ctx->client;
+    np_connect_t *client = ctx->client;
     np_assert((uv_stream_t *)&client->handle == stream);
 
     if (nread < 0) {
@@ -444,7 +462,7 @@ server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 }
 
 static void 
-server_on_write(s5_session_t *sess, const char *data, unsigned int len)
+server_on_write(np_connect_t *conn, const char *data, unsigned int len)
 {
 
     uv_buf_t buf;
@@ -453,7 +471,7 @@ server_on_write(s5_session_t *sess, const char *data, unsigned int len)
     buf.base = data;
     buf.len = len;
 
-    r = uv_write(&sess->write_req, (uv_stream_t *)&sess->handle, &buf, 1 , server_on_write_done);
+    r = uv_write(&conn->write_req, (uv_stream_t *)&conn->handle, &buf, 1 , server_on_write_done);
 
     int i;
 
@@ -466,7 +484,7 @@ server_on_write(s5_session_t *sess, const char *data, unsigned int len)
         UV_SHOW_ERROR(r, "write error");
     }
     
-    //server_timer_reset(s5_session_t *sess);
+    //server_timer_reset(np_connect_t *conn);
     
 }
 
@@ -483,7 +501,8 @@ server_on_connect(uv_stream_t *us, int status)
     int err;
     np_status_t st;
     np_context_t *ctx;
-    s5_session_t *client;
+    np_connect_t *client;
+    char *client_ip;
     struct nproxy_server *server;
     
     if (status != 0) {
@@ -516,8 +535,12 @@ server_on_connect(uv_stream_t *us, int status)
         return;
     }
     
-    ctx->client_addr = server_get_remote_addr((uv_stream_t *)&client->handle);
-    ctx->client_ip = server_sockaddr_to_str((struct sockaddr_storage *)ctx->client_addr);
+    err = server_get_remote_addr((uv_stream_t *)&client->handle, &client->srcaddr.addr);
+    if (err) {
+        UV_SHOW_ERROR(err, "libuv on get remote addr");
+        return;
+    }
+
     
     client->handle.data = ctx;
 
@@ -526,7 +549,11 @@ server_on_connect(uv_stream_t *us, int status)
         UV_SHOW_ERROR(err, "libuv read start");
     }
     
-    log_debug("Aceepted connect from %s", ctx->client_ip);
+    client_ip = server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr.addr);
+
+    log_debug("Aceepted connect from %s", client_ip);
+
+    np_free(client_ip);
 }
 
 void
