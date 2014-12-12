@@ -14,6 +14,8 @@
 #define NPROXY_PROXY_POOL_LENGTH 200
 #define MAX_CONNECT_QUEUE 512
 
+//#define ENABLE_SOCKS5_SERVER_AUTH
+
 #define UV_CHECK(err, what) do {                                             \
     if ((err) != 0) {                                                       \
         log_error("server run failed. %s:%s", what, uv_err_name(err));      \

@@ -341,7 +341,7 @@ server_do_callback(np_connect_t *conn)
             return;
     }    
 
-    conn->phase = new_phase;
+    //conn->phase = new_phase;
 }
 
 static np_phase_t
@@ -375,6 +375,7 @@ server_do_handshake_reply(np_connect_t *conn)
     socks5_select_auth(conn->sess);
 
     switch(conn->sess->method) {
+#ifndef ENABLE_SOCKS5_SERVER_AUTH 
         case SOCKS5_NO_AUTH:
             server_write(conn, "\x05\x00", 2);
             new_phase = SOCKS5_REQUEST;
@@ -383,6 +384,16 @@ server_do_handshake_reply(np_connect_t *conn)
             server_write(conn, "\x05\x02", 2);
             new_phase = SOCKS5_SUB_NEGOTIATION;
             break;
+#else
+        case SOCKS5_NO_AUTH:
+            server_write(conn, "\x05\x02", 2);
+            new_phase = SOCKS5_SUB_NEGOTIATION;
+            break;
+        case SOCKS5_AUTH_PASSWORD:
+            server_write(conn, "\x05\x00", 2);
+            new_phase = SOCKS5_REQUEST;
+            break;
+#endif
         defaut:
             server_write(conn, "\x05\xff", 2);            
             return server_do_kill(conn);
@@ -604,7 +615,7 @@ server_on_write_done(uv_write_t *req, int status)
     np_connect_t *conn;
     np_context_t *ctx;
     
-    ctx = req->data;
+    ctx = req->handle->data;
     conn = ctx->client;
 
     conn->last_status = status;
