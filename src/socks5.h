@@ -93,10 +93,9 @@ typedef struct socks5_session {
     uint16_t        dport; 
 } s5_session_t;
 
-s5_error_t socks5_parse(s5_session_t *sess, uint8_t **data, size_t *nread);
+s5_error_t socks5_parse(s5_session_t *sess, uint8_t **data, ssize_t *nread);
 const char *socks5_strerror(s5_error_t err);
 void socks5_select_auth(s5_session_t *sess);
-void socks5_init(s5_session_t *sess);
 
 
 #endif

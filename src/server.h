@@ -62,6 +62,7 @@ typedef enum {
     SOCKS5_HANDSHAKE,
     SOCKS5_SUB_NEGOTIATION,
     SOCKS5_REQUEST,
+    SOCKS5_WAIT_LOOKUP,
     SOCKS5_REPLY,
     SOCKS5_CONN,
     SOCKS5_ALMOST_DEAD,
@@ -78,6 +79,7 @@ typedef struct nproxy_connect
     uv_write_t      write_req;
     np_addr_t       srcaddr;
     np_addr_t       dstaddr;
+    int             last_status;
 } np_connect_t;
 
 typedef struct nproxy_context {

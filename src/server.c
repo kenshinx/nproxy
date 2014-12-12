@@ -28,18 +28,24 @@ static np_status_t server_get_remote_addr(uv_stream_t *handler, struct sockaddr 
 static char *server_sockaddr_to_str(struct sockaddr_storage *addr);
 static char *server_get_remote_ip(uv_stream_t *handler);
 
-static void server_do_next(np_connect_t *conn, const uint8_t *buf, ssize_t nread);
-static np_phase_t server_do_handshake(np_connect_t *conn, const uint8_t *data, ssize_t nread);
-static np_phase_t server_do_handshake_auth(np_connect_t *conn, const uint8_t *data, ssize_t nread);
-static np_phase_t server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread);
-static np_phase_t server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static void server_do_parse(np_connect_t *conn, const uint8_t *buf, ssize_t nread);
+static void server_do_callback(np_connect_t *conn);
+static np_phase_t server_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_do_handshake_reply(np_connect_t *conn);
+static np_phase_t server_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_do_sub_negotiate_reply(np_connect_t *conn);
+static np_phase_t server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_do_request_lookup(np_connect_t *conn);
+static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
 
-static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_on_close(uv_handle_t *stream);
 static void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
-static void server_on_write(np_connect_t *conn, const char *data, unsigned int len);
+static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
+static void server_write(np_connect_t *conn, const char *data, unsigned int len);
 static void server_on_write_done(uv_write_t *req, int status);
+static void server_get_addrinfo(np_connect_t *conn, const char *hostname); 
+static void server_on_get_addrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *ai);
 static void server_on_connect(uv_stream_t *us, int status);
 
 np_status_t 
@@ -75,7 +81,6 @@ server_connect_init(np_connect_t *conn)
     }
     conn->sess = sess;
 
-    socks5_init(conn->sess);
     conn->phase = SOCKS5_HANDSHAKE;
 
     return NP_OK;
@@ -298,19 +303,19 @@ server_get_remote_ip(uv_stream_t *handler)
 }
 
 static void 
-server_do_next(np_connect_t *conn, const uint8_t *data, ssize_t nread)
+server_do_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {   
     int new_phase;
 
     switch (conn->phase) {
         case SOCKS5_HANDSHAKE:
-            new_phase = server_do_handshake(conn, data, nread);
+            new_phase = server_do_handshake_parse(conn, data, nread);
             break;
         case SOCKS5_SUB_NEGOTIATION:
-            new_phase = server_do_sub_negotiation(conn, data, nread);
+            new_phase = server_do_sub_negotiate_parse(conn, data, nread);
             break;
         case SOCKS5_REQUEST:
-            new_phase = server_do_request(conn, data, nread);
+            new_phase = server_do_request_parse(conn, data, nread);
             break;
         case SOCKS5_ALMOST_DEAD:
             new_phase = server_do_kill(conn);
@@ -322,52 +327,87 @@ server_do_next(np_connect_t *conn, const uint8_t *data, ssize_t nread)
     conn->phase = new_phase;
 }
 
+static void 
+server_do_callback(np_connect_t *conn)
+{   
+    int new_phase;
+
+    switch (conn->phase) {
+        case SOCKS5_WAIT_LOOKUP:
+            new_phase = server_do_request_lookup(conn);
+            break;
+        case SOCKS5_DEAD:
+            log_error("socks5 dead");
+            return;
+    }    
+
+    conn->phase = new_phase;
+}
 
 static np_phase_t
-server_do_handshake(np_connect_t *conn, const uint8_t *data, ssize_t nread)
+server_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
 
     s5_session_t *sess = conn->sess;
 
+    sess->state = SOCKS5_VERSION;
+
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("handshake error: %s", socks5_strerror(err));
         return server_do_kill(conn);
-        //return SOCKS5_HANDSHAKE; 
     }
 
     if (nread != 0) {
         log_error("junk in handshake phase");
         return server_do_kill(conn);
     }
-    
-    socks5_select_auth(sess);
 
-    switch(sess->method) {
+    return server_do_handshake_reply(conn);
+}
+    
+static np_phase_t
+server_do_handshake_reply(np_connect_t *conn)
+{
+    np_phase_t new_phase;
+
+    socks5_select_auth(conn->sess);
+
+    switch(conn->sess->method) {
         case SOCKS5_NO_AUTH:
-            server_on_write(conn, "\x05\x00", 2);
-            return SOCKS5_REQUEST;
+            server_write(conn, "\x05\x00", 2);
+            new_phase = SOCKS5_REQUEST;
+            break;
         case SOCKS5_AUTH_PASSWORD:
-            server_on_write(conn, "\x05\x02", 2);
-            return SOCKS5_SUB_NEGOTIATION;
+            server_write(conn, "\x05\x02", 2);
+            new_phase = SOCKS5_SUB_NEGOTIATION;
+            break;
         defaut:
-            server_on_write(conn, "\x05\xff", 2);            
+            server_write(conn, "\x05\xff", 2);            
             return server_do_kill(conn);
     }
 
-    log_debug("handshake sucess.");
+    log_debug("handshake sucesss");
+    
+    return new_phase;
+    
 }
 
 static np_phase_t
-server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread)
+server_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
 
     s5_session_t *sess = conn->sess;
 
     sess->state = SOCKS5_AUTH_PW_VER; 
-    
+
+    if (conn->last_status != 0 ) {
+        log_error("last phase error: %s", socks5_strerror(conn->last_status));
+        return server_do_kill(conn);
+    }
+  
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("sub negotiate error: %s", socks5_strerror(err));
@@ -381,30 +421,44 @@ server_do_sub_negotiation(np_connect_t *conn, const uint8_t *data, ssize_t nread
 
     log_debug("usename:%s, password:%s", sess->uname, sess->passwd);
 
+    return server_do_sub_negotiate_reply(conn);
+
+}
+
+static np_phase_t
+server_do_sub_negotiate_reply(np_connect_t *conn)
+{
+    s5_session_t *sess = conn->sess;
     np_context_t *ctx = conn->handle.data;
     struct nproxy_server *server = ctx->server;
 
     if ((strcmp(server->cfg->server->username->data, sess->uname) == 0) && \
             (strcmp(server->cfg->server->password->data, sess->passwd) == 0)) {
         log_debug("sub negotiation sucess");
-        server_on_write(conn, "\x01\x00", 2);
+        server_write(conn, "\x01\x00", 2);
         return SOCKS5_REQUEST;
     } else {
         log_debug("sub negotiation failed");
-        server_on_write(conn, "\x01\x01", 2);
+        server_write(conn, "\x01\x01", 2);
         return server_do_kill(conn);
     }
-
 }
 
 static np_phase_t
-server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread)
+server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
+    char *srcip;
+    char *dstip;
 
     s5_session_t *sess = conn->sess;
 
     sess->state = SOCKS5_REQ_VER;
+
+    if (conn->last_status != 0 ) {
+        log_error("last phase error: %s", socks5_strerror(conn->last_status));
+        return server_do_kill(conn);
+    }
 
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
@@ -412,10 +466,57 @@ server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         return server_do_kill(conn);
     }
 
-    if (nread != 0 ){
+    if (nread != 0 ) {
         log_error("junk in request phase");
         return server_do_kill(conn);
     }
+
+    if (sess->atyp == SOCKS5_ATYP_DOMAIN) {
+        server_get_addrinfo(conn, sess->daddr);
+        return SOCKS5_WAIT_LOOKUP;
+    }
+    
+    if (sess->atyp == SOCKS5_ATYP_IPV4) {
+        struct sockaddr_in *addr = &conn->dstaddr.addr4;
+        bzero(addr, sizeof(*addr)); 
+        addr->sin_family = AF_INET;
+        addr->sin_port = htons(sess->dport);
+        memcpy(&addr->sin_addr, sess->daddr, sizeof(addr->sin_addr));
+        
+    } else if (sess->atyp == SOCKS5_ATYP_IPV6) {
+        struct sockaddr_in6 *addr = &conn->dstaddr.addr6;
+        bzero(addr, sizeof(*addr)); 
+        addr->sin6_family = AF_INET6;
+        addr->sin6_port = htons(sess->dport);
+        memcpy(&addr->sin6_addr, sess->daddr, sizeof(addr->sin6_addr));
+    }
+
+
+    srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
+    dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
+    log_info("%s -> %s", srcip, dstip);
+    log_debug("request sucess");
+
+    np_free(srcip);
+    np_free(dstip);
+    
+    return server_do_request_reply(conn);
+}
+
+static np_phase_t
+server_do_request_lookup(np_connect_t *conn)
+{
+    if (conn->last_status != 0 ) {
+        log_error("lookup for %s error: %s", conn->sess->daddr, socks5_strerror(conn->last_status));
+        server_write(conn, "\5\4\0\1\0\0\0\0\0\0", 10);
+        return server_do_kill(conn);
+    }
+    
+}
+
+static np_phase_t
+server_do_request_reply(np_connect_t *conn) {
+    s5_session_t *sess = conn->sess;
 
     if (sess->cmd == SOCKS5_CMD_BIND) {
         log_warn("bind request not supported");
@@ -427,14 +528,8 @@ server_do_request(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         return server_do_kill(conn);
     }
     
-    if (sess->atyp == SOCKS5_ATYP_IPV4) {
-        log_debug("daddr:%s, dport:%d", sess->daddr, sess->dport);
-    }
-
-
-    log_debug("request sucess");
-    return SOCKS5_REPLY;
 }
+
 
 
 static np_phase_t
@@ -470,13 +565,13 @@ server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
         server_do_kill(client);
         return;
     } else {
-        server_do_next(client, (uint8_t *)buf->base, nread);
+        server_do_parse(client, (uint8_t *)buf->base, nread);
     }
     np_free(buf->base);
 }
 
 static void 
-server_on_write(np_connect_t *conn, const char *data, unsigned int len)
+server_write(np_connect_t *conn, const char *data, unsigned int len)
 {
 
     uv_buf_t buf;
@@ -506,7 +601,61 @@ server_on_write(np_connect_t *conn, const char *data, unsigned int len)
 static void
 server_on_write_done(uv_write_t *req, int status)
 {
-    return;
+    np_connect_t *conn;
+    np_context_t *ctx;
+    
+    ctx = req->data;
+    conn = ctx->client;
+
+    conn->last_status = status;
+    
+    server_do_callback(conn);
+}
+
+static void 
+server_get_addrinfo(np_connect_t *conn, const char *hostname) 
+{
+    struct addrinfo hints;
+    int r;
+    
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    
+    r = uv_getaddrinfo(conn->handle->loop, &conn->dstaddr.addrinfo_req, 
+                          server_on_get_addrinfo_done, hostname, NULL, &hints);
+    if (r<0) {
+      UV_SHOW_ERROR(r, "get addrinfo error");
+    }
+// conn_timer_reset(c);
+}
+
+static void 
+server_on_get_addrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *ai)
+{
+    np_connect_t *conn;
+    np_context_t *ctx;
+    
+    ctx = req->data;
+    conn = ctx->client;
+    
+    if (status == 0) {
+      /* FIXME(bnoordhuis) Should try all addresses. */
+      if (ai->ai_family == AF_INET) {
+        conn->dstaddr.addr4 = *(const struct sockaddr_in *) ai->ai_addr;
+      } else if (ai->ai_family == AF_INET6) {
+        conn->dstaddr.addr6 = *(const struct sockaddr_in6 *) ai->ai_addr;
+      } else {
+          NOT_REACHED();
+      }
+    }
+
+    conn->last_status = status;
+
+    uv_freeaddrinfo(ai);
+
+    server_do_callback(conn);
 }
 
 static void
