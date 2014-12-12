@@ -336,6 +336,9 @@ server_do_callback(np_connect_t *conn)
         case SOCKS5_WAIT_LOOKUP:
             new_phase = server_do_request_lookup(conn);
             break;
+        case SOCKS5_ALMOST_DEAD:
+            new_phase = server_do_kill(conn);
+            break;
         case SOCKS5_DEAD:
             log_error("socks5 dead");
             return;
@@ -451,7 +454,7 @@ server_do_sub_negotiate_reply(np_connect_t *conn)
     } else {
         log_debug("sub negotiation failed");
         server_write(conn, "\x01\x01", 2);
-        return server_do_kill(conn);
+        return SOCKS5_ALMOST_DEAD;
     }
 }
 
@@ -503,41 +506,50 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
     }
 
 
-    srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
-    dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
-    log_info("%s -> %s", srcip, dstip);
-    log_debug("request sucess");
-
-    np_free(srcip);
-    np_free(dstip);
-    
     return server_do_request_reply(conn);
 }
 
 static np_phase_t
 server_do_request_lookup(np_connect_t *conn)
 {
+    char *ip;
+
     if (conn->last_status != 0 ) {
         log_error("lookup for %s error: %s", conn->sess->daddr, socks5_strerror(conn->last_status));
         server_write(conn, "\5\4\0\1\0\0\0\0\0\0", 10);
-        return server_do_kill(conn);
+        return SOCKS5_ALMOST_DEAD;
+    } else {
+        ip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
+        log_info("lookup %s : %s", conn->sess->daddr, ip);
+        np_free(ip);
+        return server_do_request_reply(conn);
     }
     
 }
 
 static np_phase_t
 server_do_request_reply(np_connect_t *conn) {
+    char *srcip;
+    char *dstip;
     s5_session_t *sess = conn->sess;
 
     if (sess->cmd == SOCKS5_CMD_BIND) {
         log_warn("bind request not supported");
-        return server_do_kill(conn);
+        server_write(conn, "\5\7\0\1\0\0\0\0\0\0", 10);
+        return SOCKS5_ALMOST_DEAD;
     }
     
     if (sess->cmd == SOCKS5_CMD_UDP_ASSOCIATE) {
         log_warn("udp associate request not supported");
-        return server_do_kill(conn);
+        server_write(conn, "\5\7\0\1\0\0\0\0\0\0", 10);
+        return SOCKS5_ALMOST_DEAD;
     }
+    
+    srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
+    dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
+    log_info("%s -> %s", srcip, dstip);
+    np_free(srcip);
+    np_free(dstip);
     
 }
 
@@ -591,6 +603,8 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
     buf.base = data;
     buf.len = len;
 
+    conn->write_req.data = conn;
+
     r = uv_write(&conn->write_req, (uv_stream_t *)&conn->handle, &buf, 1 , server_on_write_done);
 
     int i;
@@ -613,10 +627,8 @@ static void
 server_on_write_done(uv_write_t *req, int status)
 {
     np_connect_t *conn;
-    np_context_t *ctx;
     
-    ctx = req->handle->data;
-    conn = ctx->client;
+    conn = req->data;
 
     conn->last_status = status;
     
