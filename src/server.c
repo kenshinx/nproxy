@@ -128,8 +128,8 @@ server_context_init(np_context_t *ctx)
 static void
 server_context_deinit(np_context_t *ctx)
 {
-    np_free(ctx->client);
-    np_free(ctx->upstream);
+    server_connect_deinit(ctx->client);
+    server_connect_deinit(ctx->upstream);
     np_free(ctx);
 }
 
@@ -623,7 +623,7 @@ server_get_addrinfo(np_connect_t *conn, const char *hostname)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
     
-    r = uv_getaddrinfo(conn->handle->loop, &conn->dstaddr.addrinfo_req, 
+    r = uv_getaddrinfo(conn->handle.loop, &conn->dstaddr.addrinfo_req, 
                           server_on_get_addrinfo_done, hostname, NULL, &hints);
     if (r<0) {
       UV_SHOW_ERROR(r, "get addrinfo error");
