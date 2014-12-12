@@ -626,15 +626,18 @@ server_on_write_done(uv_write_t *req, int status)
 static void 
 server_get_addrinfo(np_connect_t *conn, const char *hostname) 
 {
-    struct addrinfo hints;
     int r;
+    struct addrinfo hints;
     
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = PF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_flags = 0 ;
+
+    conn->addrinfo_req.data = conn;
     
-    r = uv_getaddrinfo(conn->handle.loop, &conn->dstaddr.addrinfo_req, 
+    r = uv_getaddrinfo(conn->handle.loop, &conn->addrinfo_req, 
                           server_on_get_addrinfo_done, hostname, NULL, &hints);
     if (r<0) {
       UV_SHOW_ERROR(r, "get addrinfo error");
@@ -646,10 +649,10 @@ static void
 server_on_get_addrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *ai)
 {
     np_connect_t *conn;
-    np_context_t *ctx;
+    //np_context_t *ctx;
     
-    ctx = req->data;
-    conn = ctx->client;
+    conn = req->data;
+    //conn = ctx->client;
     
     if (status == 0) {
       /* FIXME(bnoordhuis) Should try all addresses. */
