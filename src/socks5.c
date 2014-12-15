@@ -2,7 +2,7 @@
 #include "socks5.h"
 
 s5_error_t
-socks5_parse(s5_session_t *sess, uint8_t **data, ssize_t *nread)
+socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
 {
     s5_error_t err;
     uint8_t c;
