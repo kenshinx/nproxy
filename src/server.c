@@ -36,9 +36,9 @@ static np_phase_t server_do_sub_negotiate_parse(np_connect_t *conn, const uint8_
 static np_phase_t server_do_sub_negotiate_reply(np_connect_t *conn);
 static np_phase_t server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_request_lookup(np_connect_t *conn);
+static np_phase_t server_do_request_verify(np_connect_t *conn);
 static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
-
 static void server_on_close(uv_handle_t *stream);
 static void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
@@ -46,7 +46,9 @@ static void server_write(np_connect_t *conn, const char *data, unsigned int len)
 static void server_on_write_done(uv_write_t *req, int status);
 static void server_get_addrinfo(np_connect_t *conn, const char *hostname); 
 static void server_on_get_addrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *ai);
-static void server_on_connect(uv_stream_t *us, int status);
+static int  server_connect(np_connect_t *conn);
+static void server_on_connect_done(uv_connect_t* req, int status);
+static void server_on_new_connect(uv_stream_t *us, int status);
 
 np_status_t 
 server_init(struct nproxy_server *server)
@@ -227,7 +229,7 @@ server_setup(struct nproxy_server *server)
 }
 
 static uv_buf_t *
-server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf) 
+server_on_alloc_cb(uv_handle_t *handle /*handle*/, size_t suggested_size, uv_buf_t* buf) 
 {
         *buf = uv_buf_init((char*) np_malloc(suggested_size), suggested_size);
         np_assert(buf->base != NULL);
@@ -335,6 +337,9 @@ server_do_callback(np_connect_t *conn)
     switch (conn->phase) {
         case SOCKS5_WAIT_LOOKUP:
             new_phase = server_do_request_lookup(conn);
+            break;
+        case SOCKS5_WAIT_CONN:
+            new_phase = server_do_request_reply(conn);
             break;
         case SOCKS5_ALMOST_DEAD:
             new_phase = server_do_kill(conn);
@@ -506,7 +511,7 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
     }
 
 
-    return server_do_request_reply(conn);
+    return server_do_request_verify(conn);
 }
 
 static np_phase_t
@@ -522,15 +527,16 @@ server_do_request_lookup(np_connect_t *conn)
         ip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
         log_info("lookup %s : %s", conn->sess->daddr, ip);
         np_free(ip);
-        return server_do_request_reply(conn);
+        return server_do_request_verify(conn);
     }
     
 }
 
 static np_phase_t
-server_do_request_reply(np_connect_t *conn) {
-    char *srcip;
-    char *dstip;
+server_do_request_verify(np_connect_t *conn) 
+{
+    int r;
+
     s5_session_t *sess = conn->sess;
 
     if (sess->cmd == SOCKS5_CMD_BIND) {
@@ -544,14 +550,39 @@ server_do_request_reply(np_connect_t *conn) {
         server_write(conn, "\5\7\0\1\0\0\0\0\0\0", 10);
         return SOCKS5_ALMOST_DEAD;
     }
-    
+
+    r = server_connect(conn);
+
+    if (r<0) {
+        UV_SHOW_ERROR(r, "connect error");
+        return server_do_kill(conn);
+    }
+
+    return SOCKS5_WAIT_CONN;
+
+}
+
+
+static np_phase_t
+server_do_request_reply(np_connect_t *conn)
+{
+    char *srcip;
+    char *dstip;
+
     srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
     dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
     log_info("%s -> %s", srcip, dstip);
+
+    if (conn->last_status != 0 ) {
+        log_error("connect upstream '%s' error: %s", dstip, socks5_strerror(conn->last_status));
+        server_write(conn, "\5\5\0\1\0\0\0\0\0\0", 10);
+        return SOCKS5_ALMOST_DEAD;
+    }
+
+
     np_free(srcip);
     np_free(dstip);
-    
-    
+    return SOCKS5_PROXY;
 }
 
 
@@ -685,8 +716,35 @@ server_on_get_addrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *
     server_do_callback(conn);
 }
 
+static int
+server_connect(np_connect_t *conn)
+{
+    int r;
+
+    conn->connect_req.data = conn;
+
+    r = uv_tcp_connect(&conn->connect_req,
+                       &conn->handle, 
+                       &conn->dstaddr, 
+                       server_on_connect_done);
+    return r;
+    
+}
+
+static void 
+server_on_connect_done(uv_connect_t* req, int status)
+{
+    np_connect_t *conn;
+
+    conn = req->data; 
+
+    conn->last_status = status;
+    
+    server_do_callback(conn);
+}
+
 static void
-server_on_connect(uv_stream_t *us, int status)
+server_on_new_connect(uv_stream_t *us, int status)
 {
     int err;
     np_status_t st;
@@ -772,7 +830,7 @@ server_run(struct nproxy_server *server)
 
     us->data = server;
     
-    err = uv_listen((uv_stream_t *)us, MAX_CONNECT_QUEUE, server_on_connect);
+    err = uv_listen((uv_stream_t *)us, MAX_CONNECT_QUEUE, server_on_new_connect);
     UV_CHECK(err, "libuv listen");
 
     uv_run(loop, UV_RUN_DEFAULT);
