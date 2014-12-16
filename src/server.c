@@ -205,28 +205,6 @@ server_load_proxy_pool(struct nproxy_server *server)
 }
 
 
-np_status_t
-server_setup(struct nproxy_server *server)
-{
-    np_status_t status;
-
-    status = server_load_config(server);
-    if (status != NP_OK) {
-        log_stderr("load config '%s' failed", server->configfile);
-        return status;
-    }    
-    
-    config_dump(server->cfg);
-
-    status = server_load_proxy_pool(server);
-    if (status != NP_OK) {
-        log_stderr("load proxy pool from redis failed.");
-        return status;
-    }
-    proxy_pool_dump(server->proxy_pool);
-
-    return NP_OK;
-}
 
 static uv_buf_t *
 server_on_alloc_cb(uv_handle_t *handle /*handle*/, size_t suggested_size, uv_buf_t* buf) 
@@ -802,6 +780,29 @@ server_on_new_connect(uv_stream_t *us, int status)
     log_debug("Aceepted connect from %s", client_ip);
 
     np_free(client_ip);
+}
+
+np_status_t
+server_setup(struct nproxy_server *server)
+{
+    np_status_t status;
+
+    status = server_load_config(server);
+    if (status != NP_OK) {
+        log_stderr("load config '%s' failed", server->configfile);
+        return status;
+    }    
+    
+    config_dump(server->cfg);
+
+    status = server_load_proxy_pool(server);
+    if (status != NP_OK) {
+        log_stderr("load proxy pool from redis failed.");
+        return status;
+    }
+    proxy_pool_dump(server->proxy_pool);
+
+    return NP_OK;
 }
 
 void
