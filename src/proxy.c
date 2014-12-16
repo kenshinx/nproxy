@@ -6,10 +6,10 @@
 #include "proxy.h"
 
 
-np_proxy *
+np_proxy_t *
 proxy_create(np_string *host, int port, np_string *proto, np_string *username, np_string *password)
 {
-    np_proxy *proxy;
+    np_proxy_t *proxy;
 
     proxy = np_malloc(sizeof(*proxy));
     if (proxy == NULL) {
@@ -26,7 +26,7 @@ proxy_create(np_string *host, int port, np_string *proto, np_string *username, n
 }
 
 void
-proxy_destroy(np_proxy *proxy)
+proxy_destroy(np_proxy_t *proxy)
 {
     string_destroy(proxy->host);
     string_destroy(proxy->proto);
@@ -35,7 +35,7 @@ proxy_destroy(np_proxy *proxy)
     np_free(proxy);
 }
 
-np_proxy *
+np_proxy_t *
 proxy_from_json(const char *str)
 {
     json_t *j;
@@ -70,7 +70,7 @@ proxy_from_json(const char *str)
 }
 
 static void
-proxy_print(np_proxy *proxy)
+proxy_print(np_proxy_t *proxy)
 {
     log_notice("%s://%s:%d", proxy->proto->data, proxy->host->data, proxy->port);
 }

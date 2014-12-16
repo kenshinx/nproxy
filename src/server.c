@@ -59,7 +59,7 @@ server_init(struct nproxy_server *server)
     server->configfile = NULL;
     server->cfg = NULL;
     
-    server->proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_proxy));
+    server->proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_proxy_t));
     if (server->proxy_pool == NULL) {
         return  NP_ERROR;
     }
@@ -179,7 +179,7 @@ server_load_proxy_pool(struct nproxy_server *server)
 {
     redisContext    *c;
     redisReply      *reply;
-    np_proxy        *proxy;
+    np_proxy_t      *proxy;
     unsigned int i;
     
     c = server_redis_connect(server);
@@ -203,6 +203,7 @@ server_load_proxy_pool(struct nproxy_server *server)
 
     return NP_OK;
 }
+
 
 np_status_t
 server_setup(struct nproxy_server *server)
