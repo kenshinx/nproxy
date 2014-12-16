@@ -199,6 +199,7 @@ server_load_proxy_pool(struct nproxy_server *server)
     }
 
     freeReplyObject(reply);
+    redisFree(c);
 
     return NP_OK;
 }
@@ -216,7 +217,6 @@ server_setup(struct nproxy_server *server)
     
     config_dump(server->cfg);
 
-    /*
     status = server_load_proxy_pool(server);
     if (status != NP_OK) {
         log_stderr("load proxy pool from redis failed.");
@@ -224,7 +224,6 @@ server_setup(struct nproxy_server *server)
     }
     proxy_pool_dump(server->proxy_pool);
 
-    */
     return NP_OK;
 }
 
