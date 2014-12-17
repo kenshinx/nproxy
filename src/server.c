@@ -465,7 +465,15 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         memcpy(&addr->sin6_addr, sess->daddr, sizeof(addr->sin6_addr));
     }
 
-
+    srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
+    dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
+    log_info("%s:%d -> %s:%d", srcip, 
+                               ntohs(conn->srcaddr.addr4.sin_port), 
+                               dstip,
+                               sess->dport);
+    np_free(srcip);
+    np_free(dstip);
+    
     return server_do_request_verify(conn);
 }
 
@@ -521,22 +529,13 @@ server_do_request_verify(np_connect_t *conn)
 static np_phase_t
 server_do_request_reply(np_connect_t *conn)
 {
-    char *srcip;
-    char *dstip;
-
-    srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
-    dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
-    log_info("%s -> %s", srcip, dstip);
 
     if (conn->last_status != 0 ) {
-        log_error("connect upstream '%s' error: %s", dstip, socks5_strerror(conn->last_status));
+        log_error("connect upstream '%s' error: %s", conn->sess->daddr, socks5_strerror(conn->last_status));
         server_write(conn, "\5\5\0\1\0\0\0\0\0\0", 10);
         return SOCKS5_ALMOST_DEAD;
     }
 
-
-    np_free(srcip);
-    np_free(dstip);
     return SOCKS5_PROXY;
 }
 
