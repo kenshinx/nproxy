@@ -103,6 +103,8 @@ int
 log_level_to_int(const char *text)
 {
     int i, max_level;
+
+    max_level = string_array_length(LOG_LEVEL_MAP);
     for (i = 0; i < max_level; i++) {
         if (strcmp(LOG_LEVEL_MAP[i], text) == 0) {
             return i;

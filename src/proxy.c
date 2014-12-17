@@ -1,8 +1,10 @@
 
 #include <jansson.h>
+#include <hiredis.h>
 
 #include "string.h"
 #include "log.h"
+#include "util.h"
 #include "proxy.h"
 
 
@@ -67,6 +69,27 @@ proxy_from_json(const char *str)
     }
 
     return proxy_create(host, port, proto, username, password);
+}
+
+void
+proxy_load_pool(np_array *pool, redisContext *c, char *key)
+{
+    redisReply      *reply;
+    np_proxy_t      *proxy;
+    unsigned int i;
+
+    reply = redisCommand(c, "SMEMBERS %s", key);
+
+    if (reply->type == REDIS_REPLY_ARRAY) {
+        for (i = 0; i < reply->elements; i++) {
+            proxy = proxy_from_json(reply->element[i]->str);
+            if (proxy != NULL) {
+                array_push(pool, proxy);
+            }
+        }
+    }
+
+    freeReplyObject(reply);
 }
 
 static void

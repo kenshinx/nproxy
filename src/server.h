@@ -104,7 +104,6 @@ extern struct nproxy_server server;
 
 np_status_t server_init();
 np_status_t server_setup();
-redisContext *server_redis_connect();
 void server_run();
 
 #endif

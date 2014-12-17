@@ -16,6 +16,7 @@
 #include "log.h"
 #include "proxy.h"
 #include "socks5.h"
+#include "redis.h"
 #include "server.h"
 
 static np_status_t server_connect_init(np_connect_t *conn);
@@ -114,7 +115,7 @@ server_context_init(np_context_t *ctx)
     }
     ctx->client = client;
 
-    upstream = (s5_session_t *)np_malloc(sizeof(*upstream));
+    upstream = (np_connect_t *)np_malloc(sizeof(*upstream));
     if (upstream == NULL) {
         return NP_ERROR;
     }
@@ -149,56 +150,21 @@ server_load_config()
     return NP_OK;
 }
 
-redisContext *
-server_redis_connect()
-{
-    redisContext *c;
-
-    struct timeval timeout  = {server.cfg->redis->timeout, 0};
-    
-    c = redisConnectWithTimeout(server.cfg->redis->server->data, server.cfg->redis->port, timeout);
-    if (c == NULL || c->err) {
-        if (c) {
-            log_error("connect redis '%s:%d' failed: %s\n", 
-                    server.cfg->redis->server->data, server.cfg->redis->port, c->errstr);
-            redisFree(c);
-        } else {
-            log_error("connect redis error. can't allocate redis context");
-        }
-
-        return NULL;
-    }
-
-    log_debug("connect redis %s:%d\n", server.cfg->redis->server->data, server.cfg->redis->port);
-    
-    return c;
-}
 
 static np_status_t
 server_load_proxy_pool()
 {
-    redisContext    *c;
-    redisReply      *reply;
-    np_proxy_t      *proxy;
-    unsigned int i;
-    
-    c = server_redis_connect(server);
+    redisContext *c;
+
+    c = redis_connect(server.cfg->redis->server->data, 
+                      server.cfg->redis->port,
+                      server.cfg->redis->timeout);
     if (c == NULL) {
         return NP_ERROR;
     }
+    
+    proxy_load_pool(server.proxy_pool, c, server.cfg->server->redis_key->data);
 
-    reply = redisCommand(c, "SMEMBERS %s", server.cfg->server->redis_key->data);
-
-    if (reply->type == REDIS_REPLY_ARRAY) {
-        for (i = 0; i < reply->elements; i++) {
-            proxy = proxy_from_json(reply->element[i]->str);
-            if (proxy != NULL) {
-                array_push(server.proxy_pool, proxy);
-            }
-        }
-    }
-
-    freeReplyObject(reply);
     redisFree(c);
 
     return NP_OK;
