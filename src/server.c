@@ -38,6 +38,7 @@ static np_phase_t server_do_sub_negotiate_reply(np_connect_t *conn);
 static np_phase_t server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_request_lookup(np_connect_t *conn);
 static np_phase_t server_do_request_verify(np_connect_t *conn);
+static np_phase_t server_do_upstream_handshake(np_connect_t *conn);
 static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
 static void server_on_close(uv_handle_t *stream);
@@ -465,16 +466,7 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         memcpy(&addr->sin6_addr, sess->daddr, sizeof(addr->sin6_addr));
     }
 
-    srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
-    dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
-    log_info("%s:%d -> %s:%d", srcip, 
-                               ntohs(conn->srcaddr.addr4.sin_port), 
-                               dstip,
-                               sess->dport);
-    np_free(srcip);
-    np_free(dstip);
-    
-    return server_do_request_verify(conn);
+    return server_do_upstream_handshake(conn);
 }
 
 static np_phase_t
@@ -490,7 +482,7 @@ server_do_request_lookup(np_connect_t *conn)
         ip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
         log_info("lookup %s : %s", conn->sess->daddr, ip);
         np_free(ip);
-        return server_do_request_verify(conn);
+        return server_do_upstream_handshake(conn);
     }
     
 }
@@ -522,6 +514,23 @@ server_do_request_verify(np_connect_t *conn)
     }
 
     return SOCKS5_WAIT_CONN;
+
+}
+
+static np_phase_t
+server_do_upstream_handshake(np_connect_t *conn)
+{
+    char *srcip;
+    char *dstip;
+    
+    srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
+    dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
+    log_info("%s:%d -> %s:%d", srcip, 
+                               ntohs(conn->srcaddr.addr4.sin_port), 
+                               dstip,
+                               conn->sess->dport);
+    np_free(srcip);
+    np_free(dstip);
 
 }
 
