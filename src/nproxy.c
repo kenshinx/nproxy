@@ -21,6 +21,8 @@
  *               
  */
 
+struct nproxy_server server;
+
 
 static void
 np_show_usage(void)
@@ -47,7 +49,7 @@ np_print_version(void)
 }
 
 static np_status_t
-np_parse_option(int argc, char **argv, struct nproxy_server *server)
+np_parse_option(int argc, char **argv)
 {
     char *configfile = NPROXY_DEFAULT_CONFIG_FILE;
     if (argc >= 2) {   
@@ -55,7 +57,7 @@ np_parse_option(int argc, char **argv, struct nproxy_server *server)
             np_print_version();
         } else if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--verbose") == 0) {
             log_set_level(LOG_DEBUG);
-            server->debug = true;
+            server.debug = true;
         } else if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
             np_show_usage();
         } else if (strcmp(argv[1], "-c") == 0 || strcmp(argv[1], "--config") == 0) {
@@ -71,7 +73,7 @@ np_parse_option(int argc, char **argv, struct nproxy_server *server)
 
     char *realpath;
     if ((realpath = np_get_absolute_path(configfile)) != NULL) {
-        server->configfile = realpath;
+        server.configfile = realpath;
     } else {
         log_stderr("configuration file %s can't found", configfile);
         return NP_ERROR;
@@ -82,34 +84,34 @@ np_parse_option(int argc, char **argv, struct nproxy_server *server)
 }
 
 static void
-np_print_run(struct nproxy_server *server)
+np_print_run()
 {
     log_stdout("nproxy server start");
-    log_stdout("listen on %s:%d", server->cfg->server->listen->data, server->cfg->server->port);
-    log_stdout("config file: %s", server->configfile);
+    log_stdout("listen on %s:%d", server.cfg->server->listen->data, server.cfg->server->port);
+    log_stdout("config file: %s", server.configfile);
 }
 
 int
 main(int argc, char **argv)
 {
-    struct nproxy_server server;
+    
     np_status_t status;
     
     log_init();
 
-    status = server_init(&server);
+    status = server_init();
     if (status != NP_OK) {
         log_stderr("init server failed.");
         exit(1);
     }
 
-    status = np_parse_option(argc, argv, &server);
+    status = np_parse_option(argc, argv);
     if (status != NP_OK) {
         log_stderr("parse option failed.");
         exit(1);
     }
 
-    status = server_setup(&server);
+    status = server_setup();
     if (status != NP_OK) {
         log_stderr("setup server failed.");
         exit(1);
@@ -129,9 +131,9 @@ main(int argc, char **argv)
         exit(1);
     }
     
-    np_print_run(&server);
+    np_print_run();
     
-    server_run(&server);
+    server_run();
     
     exit(1);
     

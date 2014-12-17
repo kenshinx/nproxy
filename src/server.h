@@ -49,7 +49,6 @@ union proxy_handler {
 #endif
 };
 
-
 typedef union {
     uv_req_t req;
     struct sockaddr_in6 addr6;
@@ -101,10 +100,12 @@ struct nproxy_server {
     unsigned        debug:1;
 }; 
 
-np_status_t server_init(struct nproxy_server *server);
-np_status_t server_setup(struct nproxy_server *server);
-redisContext *server_redis_connect(struct nproxy_server *server);
-void server_run(struct nproxy_server *server);
+extern struct nproxy_server server;
+
+np_status_t server_init();
+np_status_t server_setup();
+redisContext *server_redis_connect();
+void server_run();
 
 #endif
 

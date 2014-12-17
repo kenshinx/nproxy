@@ -22,8 +22,8 @@ static np_status_t server_connect_init(np_connect_t *conn);
 static void server_connect_deinit(np_connect_t *conn);
 static np_status_t server_context_init(np_context_t *ctx);
 static void server_context_deinit(np_context_t *ctx);
-static np_status_t server_load_config(struct nproxy_server *server);
-static np_status_t server_load_proxy_pool(struct nproxy_server *server);
+static np_status_t server_load_config();
+static np_status_t server_load_proxy_pool();
 static np_status_t server_get_remote_addr(uv_stream_t *handler, struct sockaddr *addr);
 static char *server_sockaddr_to_str(struct sockaddr_storage *addr);
 static char *server_get_remote_ip(uv_stream_t *handler);
@@ -51,23 +51,23 @@ static void server_on_connect_done(uv_connect_t* req, int status);
 static void server_on_new_connect(uv_stream_t *us, int status);
 
 np_status_t 
-server_init(struct nproxy_server *server)
+server_init()
 {
-    server->us = NULL;
-    server->loop = NULL;
+    server.us = NULL;
+    server.loop = NULL;
 
-    server->configfile = NULL;
-    server->cfg = NULL;
+    server.configfile = NULL;
+    server.cfg = NULL;
     
-    server->proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_proxy_t));
-    if (server->proxy_pool == NULL) {
+    server.proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_proxy_t));
+    if (server.proxy_pool == NULL) {
         return  NP_ERROR;
     }
 
-    server->pidfile = NULL;
-    server->pid = getpid();
+    server.pidfile = NULL;
+    server.pid = getpid();
     
-    server->debug = false;
+    server.debug = false;
 
     return NP_OK;
 }
@@ -136,31 +136,31 @@ server_context_deinit(np_context_t *ctx)
 }
 
 static np_status_t
-server_load_config(struct nproxy_server *server)
+server_load_config()
 {
     
     struct config *cfg;
-    cfg = config_create(server->configfile);
+    cfg = config_create(server.configfile);
     if (cfg == NULL) {
         return NP_ERROR;
     }
-    server->cfg = cfg;
-    log_info("load config '%s' sucess", server->configfile);
+    server.cfg = cfg;
+    log_info("load config '%s' sucess", server.configfile);
     return NP_OK;
 }
 
 redisContext *
-server_redis_connect(struct nproxy_server *server)
+server_redis_connect()
 {
     redisContext *c;
 
-    struct timeval timeout  = {server->cfg->redis->timeout, 0};
+    struct timeval timeout  = {server.cfg->redis->timeout, 0};
     
-    c = redisConnectWithTimeout(server->cfg->redis->server->data, server->cfg->redis->port, timeout);
+    c = redisConnectWithTimeout(server.cfg->redis->server->data, server.cfg->redis->port, timeout);
     if (c == NULL || c->err) {
         if (c) {
             log_error("connect redis '%s:%d' failed: %s\n", 
-                    server->cfg->redis->server->data, server->cfg->redis->port, c->errstr);
+                    server.cfg->redis->server->data, server.cfg->redis->port, c->errstr);
             redisFree(c);
         } else {
             log_error("connect redis error. can't allocate redis context");
@@ -169,13 +169,13 @@ server_redis_connect(struct nproxy_server *server)
         return NULL;
     }
 
-    log_debug("connect redis %s:%d\n", server->cfg->redis->server->data, server->cfg->redis->port);
+    log_debug("connect redis %s:%d\n", server.cfg->redis->server->data, server.cfg->redis->port);
     
     return c;
 }
 
 static np_status_t
-server_load_proxy_pool(struct nproxy_server *server)
+server_load_proxy_pool()
 {
     redisContext    *c;
     redisReply      *reply;
@@ -187,13 +187,13 @@ server_load_proxy_pool(struct nproxy_server *server)
         return NP_ERROR;
     }
 
-    reply = redisCommand(c, "SMEMBERS %s", server->cfg->server->redis_key->data);
+    reply = redisCommand(c, "SMEMBERS %s", server.cfg->server->redis_key->data);
 
     if (reply->type == REDIS_REPLY_ARRAY) {
         for (i = 0; i < reply->elements; i++) {
             proxy = proxy_from_json(reply->element[i]->str);
             if (proxy != NULL) {
-                array_push(server->proxy_pool, proxy);
+                array_push(server.proxy_pool, proxy);
             }
         }
     }
@@ -427,10 +427,9 @@ server_do_sub_negotiate_reply(np_connect_t *conn)
 {
     s5_session_t *sess = conn->sess;
     np_context_t *ctx = conn->handle.data;
-    struct nproxy_server *server = ctx->server;
 
-    if ((strcmp(server->cfg->server->username->data, sess->uname) == 0) && \
-            (strcmp(server->cfg->server->password->data, sess->passwd) == 0)) {
+    if ((strcmp(server.cfg->server->username->data, sess->uname) == 0) && \
+            (strcmp(server.cfg->server->password->data, sess->passwd) == 0)) {
         log_debug("sub negotiation sucess");
         server_write(conn, "\x01\x00", 2);
         return SOCKS5_REQUEST;
@@ -729,21 +728,17 @@ server_on_new_connect(uv_stream_t *us, int status)
     np_context_t *ctx;
     np_connect_t *client;
     char *client_ip;
-    struct nproxy_server *server;
     
     if (status != 0) {
         UV_SHOW_ERROR(status, "libuv on connect");
         return;
     }
 
-    server = (struct nproxy_server *)us->data;
 
     ctx = (np_context_t *)np_malloc(sizeof(*ctx));
     if (ctx == NULL) {
         return ;
     }
-
-    ctx->server = server;
 
     st = server_context_init(ctx);
     if (st != NP_OK) {
@@ -783,30 +778,30 @@ server_on_new_connect(uv_stream_t *us, int status)
 }
 
 np_status_t
-server_setup(struct nproxy_server *server)
+server_setup()
 {
     np_status_t status;
 
     status = server_load_config(server);
     if (status != NP_OK) {
-        log_stderr("load config '%s' failed", server->configfile);
+        log_stderr("load config '%s' failed", server.configfile);
         return status;
     }    
     
-    config_dump(server->cfg);
+    config_dump(server.cfg);
 
     status = server_load_proxy_pool(server);
     if (status != NP_OK) {
         log_stderr("load proxy pool from redis failed.");
         return status;
     }
-    proxy_pool_dump(server->proxy_pool);
+    proxy_pool_dump(server.proxy_pool);
 
     return NP_OK;
 }
 
 void
-server_run(struct nproxy_server *server)
+server_run()
 {
     uv_tcp_t *us;
     uv_loop_t *loop;
@@ -822,14 +817,14 @@ server_run(struct nproxy_server *server)
 
     uv_tcp_init(loop, us);
     
-    uv_ip4_addr(server->cfg->server->listen->data, server->cfg->server->port, &addr);
+    uv_ip4_addr(server.cfg->server->listen->data, server.cfg->server->port, &addr);
     err = uv_tcp_bind(us, (struct sockaddr *)&addr, 0);
     UV_CHECK(err, "libuv tcp bind");
     
-    server->us = us;
-    server->loop = loop;
+    server.us = us;
+    server.loop = loop;
 
-    us->data = server;
+    us->data = &server;
     
     err = uv_listen((uv_stream_t *)us, MAX_CONNECT_QUEUE, server_on_new_connect);
     UV_CHECK(err, "libuv listen");
