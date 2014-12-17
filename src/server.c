@@ -170,14 +170,26 @@ server_load_proxy_pool()
     return NP_OK;
 }
 
+static np_proxy_t *
+server_get_proxy()
+{
+    /* return random np_proxy_t from proxy_pool */
+    int i;
+    np_proxy_t *proxy;
+    
+    i = np_random(server.proxy_pool->nelts);
+    
+    proxy = array_get(server.proxy_pool, i);
 
+    return proxy;
+}
 
 static uv_buf_t *
 server_on_alloc_cb(uv_handle_t *handle /*handle*/, size_t suggested_size, uv_buf_t* buf) 
 {
-        *buf = uv_buf_init((char*) np_malloc(suggested_size), suggested_size);
-        np_assert(buf->base != NULL);
-        return buf;
+    *buf = uv_buf_init((char*) np_malloc(suggested_size), suggested_size);
+    np_assert(buf->base != NULL);
+    return buf;
 }
 
 static np_status_t

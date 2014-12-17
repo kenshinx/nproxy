@@ -34,6 +34,6 @@ void *_np_malloc(size_t size, const char *fname, int line);
 void *_np_realloc(void *ptr, size_t size, const char *fname, int line);
 void _np_free(void *ptr, const char *fname, int line);
 void _np_assert(const char *cond, const char *file, int line, int panic);
-
+int np_random(int max);
 #endif
 

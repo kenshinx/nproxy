@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <limits.h>
+#include <time.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -93,5 +94,12 @@ _np_assert(const char *cond, const char *file, int line, int panic)
         //nc_stacktrace(1);
         abort();
     }
+}
+
+int 
+np_random(int max)
+{
+    srand(time(NULL));
+    return rand() % max;
 }
 
