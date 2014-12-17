@@ -399,7 +399,7 @@ server_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, ssize_t n
         return server_do_kill(conn);
     }
 
-    log_debug("usename:%s, password:%s", sess->uname, sess->passwd);
+    log_debug("sub negotiate usename:%s, password:%s", sess->uname, sess->passwd);
 
     return server_do_sub_negotiate_reply(conn);
 
@@ -469,6 +469,8 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         addr->sin6_port = htons(sess->dport);
         memcpy(&addr->sin6_addr, sess->daddr, sizeof(addr->sin6_addr));
     }
+
+    log_debug("request parse sucess");
 
     return server_do_upstream_init(conn);
 }
