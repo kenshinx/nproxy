@@ -85,7 +85,7 @@ server_connect_init(np_connect_t *conn)
     }
     conn->sess = sess;
 
-    conn->phase = SOCKS5_HANDSHAKE;
+    conn->last_status = 0;
 
     return NP_OK;
 
@@ -520,17 +520,44 @@ server_do_request_verify(np_connect_t *conn)
 static np_phase_t
 server_do_upstream_handshake(np_connect_t *conn)
 {
-    char *srcip;
-    char *dstip;
+    char *client_ip;
+    char *remote_ip;
+
+    np_proxy_t *proxy;
+    np_context_t *ctx;
+    np_connect_t *client;
+    np_connect_t *upstream;
+
+    client = conn;
+
+    ctx = conn->handle.data;
+
+    upstream = ctx->upstream;
+
+    memcpy(&upstream->dstaddr, &client->dstaddr, sizeof(client->dstaddr));
+
+    uv_tcp_init(server.loop, &upstream->handle);
+    uv_timer_init(server.loop, &upstream->timer);
+
+    upstream->phase = SOCKS5_UPSTREAM_HANDSHAKE;
+    upstream->sess->state = SOCKS5_CLIENT_VERSION;
+
+    proxy = server_get_proxy();
     
-    srcip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr);
-    dstip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
-    log_info("%s:%d -> %s:%d", srcip, 
-                               ntohs(conn->srcaddr.addr4.sin_port), 
-                               dstip,
-                               conn->sess->dport);
-    np_free(srcip);
-    np_free(dstip);
+    client_ip = server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr);
+    remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)&upstream->dstaddr);
+    log_info("%s:%d -> %s:%d -> %s:%d", client_ip, 
+                                        ntohs(client->srcaddr.addr4.sin_port), 
+                                        proxy->host->data,
+                                        proxy->port,
+                                        remote_ip,
+                                        ntohs(upstream->dstaddr.addr4.sin_port));
+    np_free(client_ip);
+    np_free(remote_ip);
+
+    server_connect(upstream);
+
+    //return SOCKS5_WAIT_UPSTREAM_HANDSHAKE;
 
 }
 
@@ -733,8 +760,8 @@ server_on_new_connect(uv_stream_t *us, int status)
 
     client = ctx->client;
 
-    uv_tcp_init(us->loop, &ctx->client->handle);
-    uv_timer_init(us->loop, &ctx->client->timer);
+    uv_tcp_init(us->loop, &client->handle);
+    uv_timer_init(us->loop, &client->timer);
     
     err = uv_accept((uv_stream_t *)us, (uv_stream_t *)&client->handle);
     if (err) {
@@ -750,6 +777,7 @@ server_on_new_connect(uv_stream_t *us, int status)
 
     
     client->handle.data = ctx;
+    client->phase = SOCKS5_HANDSHAKE;
 
     err = uv_read_start((uv_stream_t *)&client->handle, (uv_alloc_cb)server_on_alloc_cb, (uv_read_cb)server_on_read);
     if (err) {
@@ -757,9 +785,7 @@ server_on_new_connect(uv_stream_t *us, int status)
     }
     
     client_ip = server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr.addr);
-
     log_debug("Aceepted connect from %s", client_ip);
-
     np_free(client_ip);
 }
 

@@ -66,6 +66,8 @@ typedef enum {
     SOCKS5_PROXY,
     SOCKS5_ALMOST_DEAD,
     SOCKS5_DEAD,
+
+    SOCKS5_UPSTREAM_HANDSHAKE,
 } np_phase_t;
 
 
@@ -84,7 +86,6 @@ typedef struct nproxy_connect
 } np_connect_t;
 
 typedef struct nproxy_context {
-    struct nproxy_server    *server;
     np_connect_t            *client;
     np_connect_t            *upstream;          
 } np_context_t;

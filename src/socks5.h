@@ -53,6 +53,8 @@ typedef enum {
     SOCKS5_REQ_DPORT0,
     SOCKS5_REQ_DPORT1,
     
+    SOCKS5_CLIENT_VERSION,
+    
 } s5_state_t;
 
 
