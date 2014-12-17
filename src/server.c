@@ -532,13 +532,17 @@ server_do_upstream_init(np_connect_t *conn)
     np_connect_t *client;
     np_connect_t *upstream;
 
+    proxy = server_get_proxy();
+
     client = conn;
 
     ctx = conn->handle.data;
 
     upstream = ctx->upstream;
 
-    memcpy(&upstream->dstaddr, &client->dstaddr, sizeof(client->dstaddr));
+    memcpy(&upstream->remoteaddr, &client->dstaddr, sizeof(client->dstaddr));
+
+    uv_ip4_addr(proxy->host->data, proxy->port, &upstream->dstaddr.addr4);
 
     uv_tcp_init(server.loop, &upstream->handle);
     uv_timer_init(server.loop, &upstream->timer);
@@ -546,7 +550,6 @@ server_do_upstream_init(np_connect_t *conn)
     upstream->phase = SOCKS5_WAIT_UPSTREAM_CONN;
     upstream->sess->state = SOCKS5_CLIENT_VERSION;
 
-    proxy = server_get_proxy();
     
     client_ip = server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr);
     remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)&upstream->dstaddr);
@@ -569,7 +572,19 @@ server_do_upstream_init(np_connect_t *conn)
 static np_phase_t
 server_do_upstream_handshake(np_connect_t *conn)
 {
-    log_info("begin upstream handshake");
+    char *upstream_ip;
+
+    upstream_ip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
+
+    if (conn->last_status != 0 ) {
+        log_error("connect upstream '%s' error: %s", 
+                upstream_ip, socks5_strerror(conn->last_status));
+        return SOCKS5_ALMOST_DEAD;
+    }
+
+    log_debug("connect upstream '%s' sucess", upstream_ip);
+
+    np_free(upstream_ip);
     return;
 }
 

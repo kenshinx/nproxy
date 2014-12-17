@@ -82,6 +82,7 @@ typedef struct nproxy_connect
     uv_connect_t        connect_req;
     np_addr_t           srcaddr;
     np_addr_t           dstaddr;
+    np_addr_t           remoteaddr;
     int                 last_status;
 } np_connect_t;
 
