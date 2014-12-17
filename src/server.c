@@ -38,6 +38,7 @@ static np_phase_t server_do_sub_negotiate_reply(np_connect_t *conn);
 static np_phase_t server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_request_lookup(np_connect_t *conn);
 static np_phase_t server_do_request_verify(np_connect_t *conn);
+static np_phase_t server_do_upstream_init(np_connect_t *conn);
 static np_phase_t server_do_upstream_handshake(np_connect_t *conn);
 static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
@@ -298,6 +299,9 @@ server_do_callback(np_connect_t *conn)
         case SOCKS5_WAIT_CONN:
             new_phase = server_do_request_reply(conn);
             break;
+        case SOCKS5_WAIT_UPSTREAM_CONN:
+            new_phase = server_do_upstream_handshake(conn);
+            break;
         case SOCKS5_ALMOST_DEAD:
             new_phase = server_do_kill(conn);
             break;
@@ -466,7 +470,7 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         memcpy(&addr->sin6_addr, sess->daddr, sizeof(addr->sin6_addr));
     }
 
-    return server_do_upstream_handshake(conn);
+    return server_do_upstream_init(conn);
 }
 
 static np_phase_t
@@ -482,7 +486,7 @@ server_do_request_lookup(np_connect_t *conn)
         ip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
         log_info("lookup %s : %s", conn->sess->daddr, ip);
         np_free(ip);
-        return server_do_upstream_handshake(conn);
+        return server_do_upstream_init(conn);
     }
     
 }
@@ -518,7 +522,7 @@ server_do_request_verify(np_connect_t *conn)
 }
 
 static np_phase_t
-server_do_upstream_handshake(np_connect_t *conn)
+server_do_upstream_init(np_connect_t *conn)
 {
     char *client_ip;
     char *remote_ip;
@@ -539,7 +543,7 @@ server_do_upstream_handshake(np_connect_t *conn)
     uv_tcp_init(server.loop, &upstream->handle);
     uv_timer_init(server.loop, &upstream->timer);
 
-    upstream->phase = SOCKS5_UPSTREAM_HANDSHAKE;
+    upstream->phase = SOCKS5_WAIT_UPSTREAM_CONN;
     upstream->sess->state = SOCKS5_CLIENT_VERSION;
 
     proxy = server_get_proxy();
@@ -557,8 +561,16 @@ server_do_upstream_handshake(np_connect_t *conn)
 
     server_connect(upstream);
 
-    //return SOCKS5_WAIT_UPSTREAM_HANDSHAKE;
+    return SOCKS5_PROXY;
 
+}
+
+
+static np_phase_t
+server_do_upstream_handshake(np_connect_t *conn)
+{
+    log_info("begin upstream handshake");
+    return;
 }
 
 
