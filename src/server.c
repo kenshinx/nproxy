@@ -25,9 +25,9 @@ static np_status_t server_context_init(np_context_t *ctx);
 static void server_context_deinit(np_context_t *ctx);
 static np_status_t server_load_config();
 static np_status_t server_load_proxy_pool();
-static np_status_t server_get_remote_addr(uv_stream_t *handler, struct sockaddr *addr);
+static np_status_t server_get_remote_addr(uv_stream_t *handle, struct sockaddr *addr);
 static char *server_sockaddr_to_str(struct sockaddr_storage *addr);
-static char *server_get_remote_ip(uv_stream_t *handler);
+static char *server_get_remote_ip(uv_stream_t *handle);
 
 static void server_do_parse(np_connect_t *conn, const uint8_t *buf, ssize_t nread);
 static void server_do_callback(np_connect_t *conn);
@@ -43,7 +43,7 @@ static np_phase_t server_upstream_do_handshake(np_connect_t *conn);
 static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
 static void server_on_close(uv_handle_t *stream);
-static void server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
+static void server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_write(np_connect_t *conn, const char *data, unsigned int len);
 static void server_on_write_done(uv_write_t *req, int status);
@@ -116,6 +116,7 @@ server_context_init(np_context_t *ctx)
         return NP_ERROR;
     }
     ctx->client = client;
+    client->ctx = ctx;
 
     upstream = (np_connect_t *)np_malloc(sizeof(*upstream));
     if (upstream == NULL) {
@@ -126,6 +127,7 @@ server_context_init(np_context_t *ctx)
         return NP_ERROR;
     }
     ctx->upstream = upstream;
+    upstream->ctx = ctx;
     
     return NP_OK;
 }
@@ -195,14 +197,14 @@ server_on_alloc_cb(uv_handle_t *handle /*handle*/, size_t suggested_size, uv_buf
 }
 
 static np_status_t
-server_get_remote_addr(uv_stream_t *handler, struct sockaddr *addr)
+server_get_remote_addr(uv_stream_t *handle, struct sockaddr *addr)
 {
     int len;
     int err;
 
     len = sizeof(*addr);
 
-    err = uv_tcp_getpeername((uv_tcp_t *)handler, addr, &len);
+    err = uv_tcp_getpeername((uv_tcp_t *)handle, addr, &len);
     if (err != 0) {
         log_error("get remote ip failed");
         return NP_ERROR;
@@ -246,13 +248,13 @@ server_sockaddr_to_str(struct sockaddr_storage *addr)
 }
 
 static char *
-server_get_remote_ip(uv_stream_t *handler)
+server_get_remote_ip(uv_stream_t *handle)
 {
     struct sockaddr *remote_addr;
     char *ip;
 
     remote_addr = np_malloc(sizeof(*remote_addr));
-    server_get_remote_addr(handler, remote_addr);
+    server_get_remote_addr(handle, remote_addr);
     if (remote_addr == NULL) {
         return NULL;
     }
@@ -409,7 +411,6 @@ static np_phase_t
 server_do_sub_negotiate_reply(np_connect_t *conn)
 {
     s5_session_t *sess = conn->sess;
-    np_context_t *ctx = conn->handle.data;
 
     if ((strcmp(server.cfg->server->username->data, sess->uname) == 0) && \
             (strcmp(server.cfg->server->password->data, sess->passwd) == 0)) {
@@ -526,6 +527,7 @@ server_do_request_verify(np_connect_t *conn)
 static np_phase_t
 server_upstream_do_init(np_connect_t *conn)
 {
+    int err;
     char *client_ip;
     char *remote_ip;
 
@@ -538,7 +540,7 @@ server_upstream_do_init(np_connect_t *conn)
 
     client = conn;
 
-    ctx = conn->handle.data;
+    ctx = conn->ctx;
 
     upstream = ctx->upstream;
 
@@ -565,6 +567,11 @@ server_upstream_do_init(np_connect_t *conn)
     np_free(remote_ip);
 
     server_connect(upstream);
+
+    err = uv_read_start((uv_stream_t *)&upstream->handle, (uv_alloc_cb)server_on_alloc_cb, (uv_read_cb)server_on_read_done);
+    if (err) {
+        UV_SHOW_ERROR(err, "libuv upstream read error");
+    }
 
     return SOCKS5_PROXY;
 
@@ -626,20 +633,20 @@ server_on_close(uv_handle_t *stream)
 }
 
 static void
-server_on_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
+server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
-    np_context_t *ctx = stream->data;
-    np_connect_t *client = ctx->client;
-    np_assert((uv_stream_t *)&client->handle == stream);
+    np_connect_t *conn = stream->data;
+    np_context_t *ctx = conn->ctx;
+    np_assert((uv_stream_t *)&conn->handle == stream);
 
     if (nread < 0) {
         if (nread != UV_EOF) {
             UV_SHOW_ERROR(nread, "read error");
         }
-        server_do_kill(client);
+        server_do_kill(conn);
         return;
     } else {
-        server_do_parse(client, (uint8_t *)buf->base, nread);
+        server_do_parse(conn, (uint8_t *)buf->base, nread);
     }
     np_free(buf->base);
 }
@@ -804,11 +811,10 @@ server_on_new_connect(uv_stream_t *us, int status)
         return;
     }
 
-    
-    client->handle.data = ctx;
+    client->handle.data = client;
     client->phase = SOCKS5_HANDSHAKE;
 
-    err = uv_read_start((uv_stream_t *)&client->handle, (uv_alloc_cb)server_on_alloc_cb, (uv_read_cb)server_on_read);
+    err = uv_read_start((uv_stream_t *)&client->handle, (uv_alloc_cb)server_on_alloc_cb, (uv_read_cb)server_on_read_done);
     if (err) {
         UV_SHOW_ERROR(err, "libuv read start");
     }

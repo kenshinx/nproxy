@@ -73,17 +73,18 @@ typedef enum {
 
 typedef struct nproxy_connect 
 {
-    s5_session_t        *sess;
-    np_phase_t          phase;
-    uv_tcp_t            handle;
-    uv_timer_t          timer;
-    uv_write_t          write_req;
-    uv_getaddrinfo_t    addrinfo_req;
-    uv_connect_t        connect_req;
-    np_addr_t           srcaddr;
-    np_addr_t           dstaddr;
-    np_addr_t           remoteaddr;
-    int                 last_status;
+    s5_session_t            *sess;
+    struct np_context_t     *ctx;
+    np_phase_t              phase;
+    uv_tcp_t                handle;
+    uv_timer_t              timer;
+    uv_write_t              write_req;
+    uv_getaddrinfo_t        addrinfo_req;
+    uv_connect_t            connect_req;
+    np_addr_t               srcaddr;
+    np_addr_t               dstaddr;
+    np_addr_t               remoteaddr;
+    int                     last_status;
 } np_connect_t;
 
 typedef struct nproxy_context {
