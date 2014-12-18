@@ -40,6 +40,7 @@ static np_phase_t server_do_request_lookup(np_connect_t *conn);
 static np_phase_t server_do_request_verify(np_connect_t *conn);
 static np_phase_t server_upstream_do_init(np_connect_t *conn);
 static np_phase_t server_upstream_do_handshake(np_connect_t *conn);
+static np_phase_t server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
 static void server_on_close(uv_handle_t *stream);
@@ -279,11 +280,16 @@ server_do_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         case SOCKS5_REQUEST:
             new_phase = server_do_request_parse(conn, data, nread);
             break;
+        case SOCKS5_UPSTREAM_HANDSHAKE:
+            new_phase = server_upstream_do_handshake_parse(conn, data, nread);
+            break;
         case SOCKS5_ALMOST_DEAD:
             new_phase = server_do_kill(conn);
             break;
         case SOCKS5_DEAD:
             log_error("socks5 dead");
+            return;
+        default :
             return;
     }    
     conn->phase = new_phase;
@@ -310,9 +316,11 @@ server_do_callback(np_connect_t *conn)
         case SOCKS5_DEAD:
             log_error("socks5 dead");
             return;
+        default:
+            return;
     }    
 
-    //conn->phase = new_phase;
+    conn->phase = new_phase;
 }
 
 static np_phase_t
@@ -552,7 +560,6 @@ server_upstream_do_init(np_connect_t *conn)
     uv_timer_init(server.loop, &upstream->timer);
 
     upstream->phase = SOCKS5_WAIT_UPSTREAM_CONN;
-    upstream->sess->state = SOCKS5_CLIENT_VERSION;
 
     
     client_ip = server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr);
@@ -594,7 +601,44 @@ server_upstream_do_handshake(np_connect_t *conn)
     log_debug("connect upstream '%s' sucess", upstream_ip);
 
     np_free(upstream_ip);
-    return;
+
+    /* 
+     * V5\Auth_Field_Len\No_Auth\Uname_Passwd
+     */
+    server_write(conn, "\5\2\0\4", 4);
+
+    conn->phase = SOCKS5_UPSTREAM_HANDSHAKE;
+
+    return SOCKS5_UPSTREAM_HANDSHAKE;
+}
+
+
+static np_phase_t
+server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
+{
+    int err;
+    
+    s5_session_t *sess = conn->sess;
+    
+    sess->state = SOCKS5_CLIENT_VERSION;
+
+    if (conn->last_status != 0) {
+        log_error("upstream do handshake phase error: %s", 
+                 socks5_strerror(conn->last_status));
+        return server_do_kill(conn);
+    }
+
+    err = socks5_parse(sess, &data, &nread);
+    if (err != SOCKS5_OK) {
+        log_error("upstream parse error: %s", socks5_strerror(err));
+        return server_do_kill(conn);
+    }
+
+    if (nread != 0) {
+        log_error("junk in upstream handshake phase");
+        return server_do_kill(conn);
+    }
+
 }
 
 

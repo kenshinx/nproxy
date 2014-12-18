@@ -68,6 +68,7 @@ typedef enum {
     SOCKS5_DEAD,
 
     SOCKS5_WAIT_UPSTREAM_CONN,
+    SOCKS5_UPSTREAM_HANDSHAKE,
 } np_phase_t;
 
 

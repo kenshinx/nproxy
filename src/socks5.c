@@ -180,6 +180,13 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
                 goto out;
 
             /* request phase end*/
+
+
+            /* client handshake phase start*/
+            case SOCKS5_CLIENT_VERSION:
+                break;
+                
+
         }
     }
 
