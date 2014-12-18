@@ -192,7 +192,18 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
                 break;
 
             case SOCKS5_CLIENT_METHOD:
-                sess->method = c;
+                switch(c) {
+                    case 0:
+                        sess->method = SOCKS5_NO_AUTH;
+                        break;
+                    case 1:
+                        sess->method = SOCKS5_AUTH_GSSAPI;
+                        break;
+                    case 2:
+                        sess->method = SOCKS5_AUTH_PASSWORD;
+                        break;
+                }
+
                 sess->state = SOCKS5_CLIENT_REP_VER;
                 err = SOCKS5_OK;
                 goto out;

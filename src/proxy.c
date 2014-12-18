@@ -43,8 +43,12 @@ proxy_from_json(const char *str)
     json_t *j;
     json_error_t error;
     void *kv;
-    np_string *host, *proto, *username, *password;
     int port;
+
+    np_string *host = string_null();
+    np_string *proto = string_null();
+    np_string *username = string_null();
+    np_string *password = string_null();
 
     j = json_loads(str, 0, &error);
     if (!j) {
@@ -56,15 +60,15 @@ proxy_from_json(const char *str)
         json_t *tmp = json_object_iter_value(kv);
         
         if (strcmp(json_object_iter_key(kv), "host") == 0 && json_typeof(tmp) == JSON_STRING) {
-            host = string_create(json_string_value(tmp)); 
+            string_update(host, json_string_value(tmp)); 
         } else if (strcmp(json_object_iter_key(kv), "port") == 0 && json_typeof(tmp) == JSON_INTEGER) {
             port = json_integer_value(tmp);
         } else if (strcmp(json_object_iter_key(kv), "proto") == 0 && json_typeof(tmp) == JSON_STRING) {
-            proto = string_create(json_string_value(tmp));
+            string_update(proto, json_string_value(tmp));
         } else if (strcmp(json_object_iter_key(kv), "username") == 0 && json_typeof(tmp) == JSON_STRING) {
-            username = string_create(json_string_value(tmp));
+            string_update(username, json_string_value(tmp));
         } else if (strcmp(json_object_iter_key(kv), "password") == 0 && json_typeof(tmp) == JSON_STRING) {
-            password = string_create(json_string_value(tmp));
+            string_update(password, json_string_value(tmp));
         }
     }
 

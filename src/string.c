@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <stdbool.h>
@@ -34,6 +35,14 @@ string_create_with_len(const char *data, uint32_t len)
     strcpy(str->data, data);
 
     return str; 
+}
+
+void
+string_update(np_string *str, const char *data)
+{
+    str->len = (uint32_t)strlen(data);
+    str->data = np_realloc(str->data, str->len + 1);
+    np_memcpy(str->data, data, str->len + 1);
 }
 
 

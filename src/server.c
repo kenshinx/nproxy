@@ -41,6 +41,8 @@ static np_phase_t server_do_request_verify(np_connect_t *conn);
 static np_phase_t server_upstream_do_init(np_connect_t *conn);
 static np_phase_t server_upstream_do_handshake(np_connect_t *conn);
 static np_phase_t server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_upstream_do_sub_negotiate(np_connect_t *conn);
+static np_phase_t server_upstream_do_request(np_connect_t *conn);
 static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
 static void server_on_close(uv_handle_t *stream);
@@ -543,6 +545,7 @@ server_upstream_do_init(np_connect_t *conn)
     np_context_t *ctx;
     np_connect_t *client;
     np_connect_t *upstream;
+    s5_session_t *sess;
 
     proxy = server_get_proxy();
 
@@ -560,7 +563,17 @@ server_upstream_do_init(np_connect_t *conn)
     uv_timer_init(server.loop, &upstream->timer);
 
     upstream->phase = SOCKS5_WAIT_UPSTREAM_CONN;
+    upstream->handle.data = upstream;
 
+    sess = upstream->sess;   
+    sess->ulen = proxy->username->len;
+    if (sess->ulen) {
+        memcpy(&sess->uname, proxy->username->data, sess->ulen+1);    
+    }
+    sess->plen = proxy->password->len;
+    if (sess->plen) {
+        memcpy(&sess->passwd, proxy->password->data, sess->plen+1);
+    }
     
     client_ip = server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr);
     remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)&upstream->dstaddr);
@@ -574,8 +587,6 @@ server_upstream_do_init(np_connect_t *conn)
     np_free(remote_ip);
 
     server_connect(upstream);
-
-    upstream->handle.data = upstream;
 
     err = uv_read_start((uv_stream_t *)&upstream->handle, (uv_alloc_cb)server_on_alloc_cb, (uv_read_cb)server_on_read_done);
     if (err) {
@@ -641,8 +652,27 @@ server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssiz
         return server_do_kill(conn);
     }
 
+    if (sess->method == SOCKS5_NO_AUTH) {
+        return server_upstream_do_request(conn);       
+    } else if (sess->method == SOCKS5_AUTH_PASSWORD) {
+        return server_upstream_do_sub_negotiate(conn);
+    } else {
+        log_error("unsupport auth method.");
+        return server_do_kill(conn);
+    }
 }
 
+static np_phase_t
+server_upstream_do_sub_negotiate(np_connect_t *conn)
+{
+    return;
+}
+
+static np_phase_t
+server_upstream_do_request(np_connect_t *conn)
+{
+    return;
+}
 
 static np_phase_t
 server_do_request_reply(np_connect_t *conn)

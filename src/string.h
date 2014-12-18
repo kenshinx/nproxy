@@ -21,6 +21,8 @@ np_string *string_create_with_len(const char *data, uint32_t len);
 
 np_string *string_null(void);
 
+void string_update(np_string *str, const char *data);
+
 void string_destroy(np_string *str);
 
 bool string_compare(np_string *str1, np_string *str2);
