@@ -38,8 +38,8 @@ static np_phase_t server_do_sub_negotiate_reply(np_connect_t *conn);
 static np_phase_t server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_request_lookup(np_connect_t *conn);
 static np_phase_t server_do_request_verify(np_connect_t *conn);
-static np_phase_t server_do_upstream_init(np_connect_t *conn);
-static np_phase_t server_do_upstream_handshake(np_connect_t *conn);
+static np_phase_t server_upstream_do_init(np_connect_t *conn);
+static np_phase_t server_upstream_do_handshake(np_connect_t *conn);
 static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
 static void server_on_close(uv_handle_t *stream);
@@ -300,7 +300,7 @@ server_do_callback(np_connect_t *conn)
             new_phase = server_do_request_reply(conn);
             break;
         case SOCKS5_WAIT_UPSTREAM_CONN:
-            new_phase = server_do_upstream_handshake(conn);
+            new_phase = server_upstream_do_handshake(conn);
             break;
         case SOCKS5_ALMOST_DEAD:
             new_phase = server_do_kill(conn);
@@ -472,7 +472,7 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 
     log_debug("request parse sucess");
 
-    return server_do_upstream_init(conn);
+    return server_upstream_do_init(conn);
 }
 
 static np_phase_t
@@ -488,7 +488,7 @@ server_do_request_lookup(np_connect_t *conn)
         ip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
         log_info("lookup %s : %s", conn->sess->daddr, ip);
         np_free(ip);
-        return server_do_upstream_init(conn);
+        return server_upstream_do_init(conn);
     }
     
 }
@@ -524,7 +524,7 @@ server_do_request_verify(np_connect_t *conn)
 }
 
 static np_phase_t
-server_do_upstream_init(np_connect_t *conn)
+server_upstream_do_init(np_connect_t *conn)
 {
     char *client_ip;
     char *remote_ip;
@@ -572,7 +572,7 @@ server_do_upstream_init(np_connect_t *conn)
 
 
 static np_phase_t
-server_do_upstream_handshake(np_connect_t *conn)
+server_upstream_do_handshake(np_connect_t *conn)
 {
     char *upstream_ip;
 
