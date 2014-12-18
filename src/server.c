@@ -38,7 +38,7 @@ static np_phase_t server_do_sub_negotiate_reply(np_connect_t *conn);
 static np_phase_t server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_request_lookup(np_connect_t *conn);
 static np_phase_t server_do_request_verify(np_connect_t *conn);
-static np_phase_t server_upstream_do_init(np_connect_t *conn);
+static np_phase_t server_upstream_do_connect(np_connect_t *conn);
 static np_phase_t server_upstream_do_handshake(np_connect_t *conn);
 static np_phase_t server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_upstream_do_sub_negotiate(np_connect_t *conn);
@@ -483,7 +483,7 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 
     log_debug("request parse sucess");
 
-    return server_upstream_do_init(conn);
+    return server_upstream_do_connect(conn);
 }
 
 static np_phase_t
@@ -499,7 +499,7 @@ server_do_request_lookup(np_connect_t *conn)
         ip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
         log_info("lookup %s : %s", conn->sess->daddr, ip);
         np_free(ip);
-        return server_upstream_do_init(conn);
+        return server_upstream_do_connect(conn);
     }
     
 }
@@ -535,7 +535,7 @@ server_do_request_verify(np_connect_t *conn)
 }
 
 static np_phase_t
-server_upstream_do_init(np_connect_t *conn)
+server_upstream_do_connect(np_connect_t *conn)
 {
     int err;
     char *client_ip;
