@@ -585,10 +585,7 @@ server_upstream_do_init(np_connect_t *conn)
     return SOCKS5_PROXY;
 
 }
-
-
-static np_phase_t
-server_upstream_do_handshake(np_connect_t *conn)
+static np_phase_t server_upstream_do_handshake(np_connect_t *conn)
 {
     char *upstream_ip;
 
@@ -604,10 +601,13 @@ server_upstream_do_handshake(np_connect_t *conn)
 
     np_free(upstream_ip);
 
-    /* 
-     * V5\Auth_Field_Len\No_Auth\Uname_Passwd
-     */
+#ifdef ENABLE_SOCKS5_CLIENT_AUTH
+     /* V5\Auth_Field_Len:2\No_Auth\Uname_Passwd */
     server_write(conn, "\5\2\0\4", 4);
+#else
+     /* V5\Auth_Field_Len:1\No_Auth */
+    server_write(conn, "\5\1\0", 3);
+#endif
 
     conn->phase = SOCKS5_UPSTREAM_HANDSHAKE;
 

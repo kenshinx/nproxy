@@ -19,10 +19,11 @@
 #define SOCKS5_AUTH_PW_VERSION 0X01 
 
 
-#define SOCKS5_ERR_MAP(V)                                                           \
+#define SOCKS5_ERR_MAP(V)                                                       \
     V(-1, BAD_VERSION, "Bad protocol version.")                                 \
     V(-2, BAD_CMD, "Bad protocol command.")                                     \
     V(-3, BAD_ATYP, "Bad address type.")                                        \
+    V(-4, NEED_MORE_DATA, "Need more data.")                                    \
     V(0, OK, "No error.")                                                       \
     V(1, AUTH_SELECT, "Select authentication method.")                          \
     V(2, AUTH_VERIFY, "Verify authentication.")                                 \
@@ -54,7 +55,8 @@ typedef enum {
     SOCKS5_REQ_DPORT1,
     
     SOCKS5_CLIENT_VERSION,
-    
+    SOCKS5_CLIENT_METHOD,
+    SOCKS5_CLIENT_REP_VER,
 } s5_state_t;
 
 

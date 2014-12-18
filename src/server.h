@@ -15,6 +15,7 @@
 #define MAX_CONNECT_QUEUE 512
 
 //#define ENABLE_SOCKS5_SERVER_AUTH
+#define ENABLE_SOCKS5_CLIENT_AUTH
 
 #define UV_CHECK(err, what) do {                                             \
     if ((err) != 0) {                                                       \

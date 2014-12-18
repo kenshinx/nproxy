@@ -179,16 +179,30 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
                 err = SOCKS5_OK;
                 goto out;
 
-            /* request phase end*/
+            /* request phase end */
 
 
-            /* client handshake phase start*/
+            /* client handshake phase start */
             case SOCKS5_CLIENT_VERSION:
+                if (c != SOCKS5_SUPPORT_VERSION) {
+                    err = SOCKS5_BAD_VERSION;
+                    goto out;
+                }
+                sess->state = SOCKS5_CLIENT_METHOD;
                 break;
-                
+
+            case SOCKS5_CLIENT_METHOD:
+                sess->method = c;
+                sess->state = SOCKS5_CLIENT_REP_VER;
+                err = SOCKS5_OK;
+                goto out;
+
+            /* client handshake phase end */
 
         }
     }
+    
+    err = SOCKS5_NEED_MORE_DATA;
 
 out:
     *data = p +i;
