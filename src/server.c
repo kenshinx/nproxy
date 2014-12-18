@@ -575,6 +575,8 @@ server_upstream_do_init(np_connect_t *conn)
 
     server_connect(upstream);
 
+    upstream->handle.data = upstream;
+
     err = uv_read_start((uv_stream_t *)&upstream->handle, (uv_alloc_cb)server_on_alloc_cb, (uv_read_cb)server_on_read_done);
     if (err) {
         UV_SHOW_ERROR(err, "libuv upstream read error");
