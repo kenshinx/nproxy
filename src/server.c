@@ -566,11 +566,12 @@ server_upstream_do_init(np_connect_t *conn)
     upstream->handle.data = upstream;
 
     sess = upstream->sess;   
-    sess->ulen = proxy->username->len;
+    /* uint32_t -> uint8_t */
+    sess->ulen = (uint8_t)proxy->username->len;
     if (sess->ulen) {
         memcpy(&sess->uname, proxy->username->data, sess->ulen+1);    
     }
-    sess->plen = proxy->password->len;
+    sess->plen = (uint8_t)proxy->password->len;
     if (sess->plen) {
         memcpy(&sess->passwd, proxy->password->data, sess->plen+1);
     }
@@ -608,19 +609,19 @@ static np_phase_t server_upstream_do_handshake(np_connect_t *conn)
         return SOCKS5_ALMOST_DEAD;
     }
 
-    log_debug("connect upstream '%s' sucess", upstream_ip);
-
     np_free(upstream_ip);
 
 #ifdef ENABLE_SOCKS5_CLIENT_AUTH
      /* V5\Auth_Field_Len:2\No_Auth\Uname_Passwd */
-    server_write(conn, "\5\2\0\4", 4);
+    server_write(conn, "\5\2\0\2", 4);
 #else
      /* V5\Auth_Field_Len:1\No_Auth */
     server_write(conn, "\5\1\0", 3);
 #endif
 
     conn->phase = SOCKS5_UPSTREAM_HANDSHAKE;
+
+    log_debug("upstream beigin handshake");
 
     return SOCKS5_UPSTREAM_HANDSHAKE;
 }
@@ -665,12 +666,28 @@ server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssiz
 static np_phase_t
 server_upstream_do_sub_negotiate(np_connect_t *conn)
 {
+    char buf[256];
+    s5_session_t *sess;
+
+    sess = conn->sess;
+    
+    buf[0] = 1;
+    buf[1] = sess->ulen;
+    np_memcpy(buf+2, sess->uname, sess->ulen);
+    buf[2+sess->ulen] = sess->plen;
+    np_memcpy(buf+3+sess->ulen, sess->passwd, sess->plen); 
+    
+    server_write(conn, buf, 3+sess->ulen+sess->plen);
+
+    log_debug("upstream do sub negotiate");
+    
     return;
 }
 
 static np_phase_t
 server_upstream_do_request(np_connect_t *conn)
 {
+    log_debug("upstream do request called");
     return;
 }
 

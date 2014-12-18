@@ -87,6 +87,7 @@ typedef struct nproxy_connect
     np_addr_t               dstaddr;
     np_addr_t               remoteaddr;
     int                     last_status;
+    char                    buf[2048];
 } np_connect_t;
 
 typedef struct nproxy_context {
