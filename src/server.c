@@ -44,6 +44,7 @@ static np_phase_t server_upstream_do_handshake_parse(np_connect_t *conn, const u
 static np_phase_t server_upstream_do_sub_negotiate(np_connect_t *conn);
 static np_phase_t server_upstream_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_upstream_do_request(np_connect_t *conn);
+static np_phase_t server_upstream_do_reply_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_request_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
 static void server_on_close(uv_handle_t *stream);
@@ -559,7 +560,7 @@ server_upstream_do_connect(np_connect_t *conn)
 
     upstream = ctx->upstream;
 
-    memcpy(&upstream->remoteaddr, &client->dstaddr, sizeof(client->dstaddr));
+    np_memcpy(&upstream->remoteaddr, &client->dstaddr, sizeof(client->dstaddr));
 
     uv_ip4_addr(proxy->host->data, proxy->port, &upstream->dstaddr.addr4);
 
@@ -573,11 +574,11 @@ server_upstream_do_connect(np_connect_t *conn)
     /* uint32_t -> uint8_t */
     sess->ulen = (uint8_t)proxy->username->len;
     if (sess->ulen) {
-        memcpy(&sess->uname, proxy->username->data, sess->ulen+1);    
+        np_memcpy(&sess->uname, proxy->username->data, sess->ulen+1);    
     }
     sess->plen = (uint8_t)proxy->password->len;
     if (sess->plen) {
-        memcpy(&sess->passwd, proxy->password->data, sess->plen+1);
+        np_memcpy(&sess->passwd, proxy->password->data, sess->plen+1);
     }
     
     client_ip = server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr);
@@ -679,7 +680,7 @@ server_upstream_do_sub_negotiate(np_connect_t *conn)
 
     sess = conn->sess;
     
-    buf[0] = 1;
+    buf[0] = SOCKS5_AUTH_PW_VERSION; 
     buf[1] = sess->ulen;
     np_memcpy(buf+2, sess->uname, sess->ulen);
     buf[2+sess->ulen] = sess->plen;
@@ -726,8 +727,39 @@ server_upstream_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, 
 static np_phase_t
 server_upstream_do_request(np_connect_t *conn)
 {
+    char buf[256];
+    const struct sockaddr_storage *remote;
+    const struct sockaddr_in *r_addr_v4;
+    const struct sockaddr_in6 *r_addr_v6;
+    s5_session_t *sess;
     
     log_debug("upstream begin do request");
+
+    remote  = (struct sockaddr_storage *)&conn->remoteaddr;
+    
+    buf[0] = SOCKS5_SUPPORT_VERSION ;
+    buf[1] = SOCKS5_CMD_CONNECT;
+    buf[2] = 0;  /* Reserved */
+    
+    if (remote->ss_family == AF_INET) {
+        buf[3] = 1; /* ipv4 */ 
+        np_memcpy(buf+4, &conn->remoteaddr.addr4.sin_addr, 4);
+        np_memcpy(buf+8, &conn->remoteaddr.addr4.sin_port, 2);
+        server_write(conn, buf, 10);
+    } else if (remote->ss_family == AF_INET6) {
+        buf[3] = 4; /* ipv6 */
+        np_memcpy(buf+4, &conn->remoteaddr.addr6.sin6_addr, 16);
+        np_memcpy(buf+20, &conn->remoteaddr.addr6.sin6_port, 2);
+        server_write(conn, buf, 22);
+    }
+    log_debug("upstream send request sucess");
+    return SOCKS5_UPSTREAM_REPLY;
+}
+
+
+static np_phase_t
+server_upstream_do_reply_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
+{
     return;
 }
 

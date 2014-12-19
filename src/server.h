@@ -55,7 +55,7 @@ typedef union {
     struct sockaddr_in6 addr6;
     struct sockaddr_in addr4;
     struct sockaddr addr;
-    char buf[2048];  /* Scratch space. Used to read data into. */
+    //char buf[2048];  /* Scratch space. Used to read data into. */
 } np_addr_t;
 
 typedef enum {
@@ -71,6 +71,7 @@ typedef enum {
     SOCKS5_WAIT_UPSTREAM_CONN,
     SOCKS5_UPSTREAM_HANDSHAKE,
     SOCKS5_UPSTREAM_SUB_NEGOTIATION,
+    SOCKS5_UPSTREAM_REPLY,
 } np_phase_t;
 
 
