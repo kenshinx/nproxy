@@ -226,6 +226,105 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
                 goto out;
             /* client auth phase end */
 
+            /* client reply phase start*/
+            case SOCKS5_CLIENT_REP_VERSION:
+                if (c != SOCKS5_SUPPORT_VERSION) {
+                    err = SOCKS5_BAD_VERSION;
+                    goto out;
+                }
+                sess->state = SOCKS5_CLIENT_REP_REP;
+                break;
+
+            case SOCKS5_CLIENT_REP_REP:
+                switch(c) {
+                    case 0:
+                        sess->rep = SOCKS5_REP_SUCESS;
+                        break;
+                    case 1:
+                        sess->rep = SOCKS5_REP_SOCKS_FAIL;
+                        break;
+                    case 2:
+                        sess->rep = SOCKS5_REP_CONN_REFUSED_BY_RULESET;
+                        break;
+                    case 3:
+                        sess->rep = SOCKS5_REP_NET_UNREACHABLE;
+                        break;
+                    case 4:
+                        sess->rep = SOCKS5_REP_HOST_UNREACHABLE;
+                        break;
+                    case 5:
+                        sess->rep = SOCKS5_REP_CONN_REFUSED;
+                        break;
+                    case 6:
+                        sess->rep = SOCKS5_REP_TTL_EXPIRED;
+                        break;
+                    case 7:
+                        sess->rep = SOCKS5_REP_CMD_NOT_SUPPORTED;
+                        break;
+                    case 8:
+                        sess->rep = SOCKS5_REP_AYP_NOT_SUPPORTED;
+                        break;
+                    default:
+                        sess->rep = SOCKS5_REP_UNSSIGNED;
+                        break;
+                }
+                
+                sess->state = SOCKS5_CLIENT_REP_RSV;
+                break;
+
+            case SOCKS5_CLIENT_REP_RSV:
+                sess->state = SOCKS5_CLIENT_REP_ATYP;
+                break;
+
+            case SOCKS5_CLIENT_REP_ATYP:
+                sess->__len = 0;
+                switch(c) {
+                    case 1:  /* IPV4 */
+                        sess->atyp = SOCKS5_ATYP_IPV4;
+                        sess->alen = 4;
+                        sess->state = SOCKS5_CLIENT_REP_BADDR;
+                        break;
+                    case 3: /* DOMAIN */
+                        sess->atyp = SOCKS5_ATYP_DOMAIN;
+                        sess->alen = 0;
+                        sess->state = SOCKS5_CLIENT_REP_BDOMAIN;
+                        break;
+                    case 4: /* IPV6 */
+                        sess->atyp = SOCKS5_ATYP_IPV6;
+                        sess->alen = 16;
+                        sess->state = SOCKS5_CLIENT_REP_BADDR;
+                        break;
+                }
+                break;
+                
+            case SOCKS5_CLIENT_REP_BDOMAIN:
+                sess->alen = c;  /* Hostname.  First byte is length. */
+                sess->state = SOCKS5_CLIENT_REP_BADDR;
+                break;
+           
+            case SOCKS5_CLIENT_REP_BADDR:
+                if (sess->__len < sess->alen) {
+                    sess->baddr[sess->__len] = c;
+                    sess->__len += 1;
+                }
+                if (sess->__len == sess->alen) {
+                    sess->daddr[sess->alen] = '\0';
+                    sess->state = SOCKS5_CLIENT_REP_BPORT0;
+                }
+                break;
+
+            case SOCKS5_CLIENT_REP_BPORT0:
+                sess->bport = c <<8;
+                sess->state = SOCKS5_CLIENT_REP_BPORT1;
+                break;
+            
+            case SOCKS5_CLIENT_REP_BPORT1:
+                sess->bport |= c;
+                err = SOCKS5_OK;
+                goto out;
+            /* client reply phase end*/
+
+
         }
     }
     

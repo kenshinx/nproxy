@@ -290,6 +290,9 @@ server_do_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         case SOCKS5_UPSTREAM_SUB_NEGOTIATION:
             new_phase = server_upstream_do_sub_negotiate_parse(conn, data, nread);
             break;
+        case SOCKS5_UPSTREAM_REPLY:
+            new_phase = server_upstream_do_reply_parse(conn, data, nread);
+            break;
         case SOCKS5_ALMOST_DEAD:
             new_phase = server_do_kill(conn);
             break;
@@ -760,6 +763,31 @@ server_upstream_do_request(np_connect_t *conn)
 static np_phase_t
 server_upstream_do_reply_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
+    int err;
+
+    s5_session_t *sess = conn->sess;
+
+    sess->state = SOCKS5_CLIENT_REP_VERSION;
+    
+    if (conn->last_status != 0) {
+        log_error("upstream send request mesg  error: %s", 
+                 socks5_strerror(conn->last_status));
+        return server_do_kill(conn);
+    }
+
+    err = socks5_parse(sess, &data, &nread);
+    if (err != SOCKS5_OK) {
+        log_error("upstream reply phase error: %s", socks5_strerror(err));
+        return server_do_kill(conn);
+    }
+
+    if (nread != 0) {
+        log_error("junk in upstream handshake phase");
+        return server_do_kill(conn);
+    }
+
+    log_debug("upstream get reply sucess");
+
     return;
 }
 

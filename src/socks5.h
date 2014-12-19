@@ -58,9 +58,16 @@ typedef enum {
     
     SOCKS5_CLIENT_VERSION,
     SOCKS5_CLIENT_METHOD,
-    SOCKS5_CLIENT_REP_VER,
     SOCKS5_CLIENT_AUTH_VERSION,
     SOCKS5_CLIENT_AUTH_STATUS,
+    SOCKS5_CLIENT_REP_VERSION,
+    SOCKS5_CLIENT_REP_REP,
+    SOCKS5_CLIENT_REP_RSV,
+    SOCKS5_CLIENT_REP_ATYP,
+    SOCKS5_CLIENT_REP_BADDR,
+    SOCKS5_CLIENT_REP_BDOMAIN,
+    SOCKS5_CLIENT_REP_BPORT0,
+    SOCKS5_CLIENT_REP_BPORT1
 } s5_state_t;
 
 
@@ -84,6 +91,19 @@ typedef enum {
     SOCKS5_ATYP_IPV6 =      0X04,
 } s5_atyp_t;
 
+typedef enum {
+    SOCKS5_REP_SUCESS,
+    SOCKS5_REP_SOCKS_FAIL,
+    SOCKS5_REP_CONN_REFUSED_BY_RULESET,
+    SOCKS5_REP_NET_UNREACHABLE,
+    SOCKS5_REP_HOST_UNREACHABLE,
+    SOCKS5_REP_CONN_REFUSED,
+    SOCKS5_REP_TTL_EXPIRED,
+    SOCKS5_REP_CMD_NOT_SUPPORTED,
+    SOCKS5_REP_AYP_NOT_SUPPORTED,
+    SOCKS5_REP_UNSSIGNED = 0xff,
+} s5_rep_t;
+
 typedef struct socks5_session {
     size_t          __len;
     s5_state_t      state;
@@ -99,6 +119,9 @@ typedef struct socks5_session {
     uint8_t         alen;
     uint8_t         daddr[256]; /* 256 for atyp is domain */
     uint16_t        dport; 
+    uint8_t         baddr[256]; /* 256 for atyp is domain */
+    uint16_t        bport; 
+    s5_rep_t        rep;
 } s5_session_t;
 
 s5_error_t socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread);
