@@ -78,7 +78,7 @@ typedef enum {
 typedef struct nproxy_connect 
 {
     s5_session_t            *sess;
-    struct np_context_t     *ctx;
+    struct nproxy_context   *ctx;
     np_phase_t              phase;
     uv_tcp_t                handle;
     uv_timer_t              timer;
