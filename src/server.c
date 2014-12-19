@@ -14,6 +14,7 @@
 #include "array.h"
 #include "config.h"
 #include "log.h"
+#include "util.h"
 #include "proxy.h"
 #include "socks5.h"
 #include "redis.h"
@@ -448,8 +449,6 @@ static np_phase_t
 server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     s5_error_t err;
-    char *srcip;
-    char *dstip;
 
     s5_session_t *sess = conn->sess;
 
@@ -561,9 +560,7 @@ server_upstream_do_connect(np_connect_t *conn)
     proxy = server_get_proxy();
 
     client = conn;
-
     ctx = conn->ctx;
-
     upstream = ctx->upstream;
 
     np_memcpy(&upstream->remoteaddr, &client->dstaddr, sizeof(client->dstaddr));
@@ -608,7 +605,8 @@ server_upstream_do_connect(np_connect_t *conn)
     return SOCKS5_PROXY;
 }
 
-static np_phase_t server_upstream_do_handshake(np_connect_t *conn)
+static np_phase_t 
+server_upstream_do_handshake(np_connect_t *conn)
 {
     char *upstream_ip;
 
@@ -735,9 +733,6 @@ server_upstream_do_request(np_connect_t *conn)
 {
     char buf[256];
     const struct sockaddr_storage *remote;
-    const struct sockaddr_in *r_addr_v4;
-    const struct sockaddr_in6 *r_addr_v6;
-    s5_session_t *sess;
     
     log_debug("upstream begin do request");
 
@@ -789,21 +784,50 @@ server_upstream_do_reply_parse(np_connect_t *conn, const uint8_t *data, ssize_t 
         return server_do_kill(conn);
     }
 
-    log_debug("upstream get reply sucess");
+    log_debug("upstream parse reply sucess");
 
-    return;
+    return server_do_reply(conn);
 }
 
 static np_phase_t
 server_do_reply(np_connect_t *conn)
 {
+    char buf[256];
+    uint8_t addr_len;
 
-    if (conn->last_status != 0 ) {
-        log_error("connect upstream '%s' error: %s", conn->sess->daddr, socks5_strerror(conn->last_status));
-        server_write(conn, "\5\5\0\1\0\0\0\0\0\0", 10);
+    np_context_t *ctx = conn->ctx;
+    np_connect_t *client = ctx->client;
+    np_connect_t *upstream = conn;
+    
+    np_assert(client->phase == SOCKS5_PROXY);
+    np_assert(client->sess->state == SOCKS5_REQ_DPORT1);
+    np_assert(upstream->phase == SOCKS5_UPSTREAM_REPLY);
+    np_assert(upstream->sess->state == SOCKS5_CLIENT_REP_BPORT1);
+
+    addr_len = upstream->sess->alen;
+
+    buf[0] = SOCKS5_SUPPORT_VERSION;
+    buf[1] = upstream->sess->rep;
+    buf[2] = 0;
+    buf[3] = upstream->sess->atyp;
+    np_memcpy(buf+4, &upstream->sess->baddr, addr_len);
+    np_memcpy(buf+4+addr_len, &upstream->sess->bport, 2);
+    
+    /* 
+     * send reply mesg to client
+     * mesg conetent associated with the result of upstream reply  
+     */
+    server_write(client, buf, 6+addr_len);
+
+    if (upstream->sess->rep != SOCKS5_REP_SUCESS) {
+        /* upstream connect remote failed */
+        log_error("upstream connect remote failed. error id: %d", upstream->sess->rep);
+        server_do_kill(upstream);
         return SOCKS5_ALMOST_DEAD;
     }
 
+    log_debug("two-direction socks5 handshake sucess. begin into proxy phase");
+    
     return SOCKS5_PROXY;
 }
 
@@ -812,8 +836,8 @@ server_do_reply(np_connect_t *conn)
 static np_phase_t
 server_do_kill(np_connect_t *conn)
 {
-    uv_close((uv_handle_t* )&conn->handle, (uv_close_cb) server_on_close);
-    uv_close((uv_handle_t*)&conn->timer, (uv_close_cb) server_on_close);
+    uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
+    uv_close((uv_handle_t *)&conn->timer, (uv_close_cb) server_on_close);
     log_debug("do kill");
     return SOCKS5_DEAD;
 }
