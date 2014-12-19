@@ -727,7 +727,7 @@ static np_phase_t
 server_upstream_do_request(np_connect_t *conn)
 {
     
-    log_debug("upstream do request called");
+    log_debug("upstream begin do request");
     return;
 }
 
