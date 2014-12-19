@@ -37,7 +37,7 @@ static np_phase_t server_do_sub_negotiate_parse(np_connect_t *conn, const uint8_
 static np_phase_t server_do_sub_negotiate_reply(np_connect_t *conn);
 static np_phase_t server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_request_lookup(np_connect_t *conn);
-static np_phase_t server_do_request_verify(np_connect_t *conn);
+//static np_phase_t server_do_request_verify(np_connect_t *conn);
 static np_phase_t server_upstream_do_connect(np_connect_t *conn);
 static np_phase_t server_upstream_do_handshake(np_connect_t *conn);
 static np_phase_t server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
@@ -45,7 +45,7 @@ static np_phase_t server_upstream_do_sub_negotiate(np_connect_t *conn);
 static np_phase_t server_upstream_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_upstream_do_request(np_connect_t *conn);
 static np_phase_t server_upstream_do_reply_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
-static np_phase_t server_do_request_reply(np_connect_t *conn);
+static np_phase_t server_do_reply(np_connect_t *conn);
 static np_phase_t server_do_kill(np_connect_t *conn);
 static void server_on_close(uv_handle_t *stream);
 static void server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
@@ -314,9 +314,11 @@ server_do_callback(np_connect_t *conn)
         case SOCKS5_WAIT_LOOKUP:
             new_phase = server_do_request_lookup(conn);
             break;
+        /*
         case SOCKS5_WAIT_CONN:
-            new_phase = server_do_request_reply(conn);
+            new_phase = server_do_reply(conn);
             break;
+        */
         case SOCKS5_WAIT_UPSTREAM_CONN:
             new_phase = server_upstream_do_handshake(conn);
             break;
@@ -512,6 +514,7 @@ server_do_request_lookup(np_connect_t *conn)
     
 }
 
+/*
 static np_phase_t
 server_do_request_verify(np_connect_t *conn) 
 {
@@ -539,8 +542,8 @@ server_do_request_verify(np_connect_t *conn)
     }
 
     return SOCKS5_WAIT_CONN;
-
 }
+*/
 
 static np_phase_t
 server_upstream_do_connect(np_connect_t *conn)
@@ -603,8 +606,8 @@ server_upstream_do_connect(np_connect_t *conn)
     }
 
     return SOCKS5_PROXY;
-
 }
+
 static np_phase_t server_upstream_do_handshake(np_connect_t *conn)
 {
     char *upstream_ip;
@@ -792,7 +795,7 @@ server_upstream_do_reply_parse(np_connect_t *conn, const uint8_t *data, ssize_t 
 }
 
 static np_phase_t
-server_do_request_reply(np_connect_t *conn)
+server_do_reply(np_connect_t *conn)
 {
 
     if (conn->last_status != 0 ) {
