@@ -613,7 +613,11 @@ static np_phase_t server_upstream_do_handshake(np_connect_t *conn)
         return SOCKS5_ALMOST_DEAD;
     }
 
+    log_debug("connect sucess with upstream: %s", upstream_ip);
+
     np_free(upstream_ip);
+
+    log_debug("upstream beigin handshake");
 
 #ifdef ENABLE_SOCKS5_CLIENT_AUTH
      /* V5\Auth_Field_Len:2\No_Auth\Uname_Passwd */
@@ -624,8 +628,6 @@ static np_phase_t server_upstream_do_handshake(np_connect_t *conn)
 #endif
 
     conn->phase = SOCKS5_UPSTREAM_HANDSHAKE;
-
-    log_debug("upstream beigin handshake");
 
     return SOCKS5_UPSTREAM_HANDSHAKE;
 }
@@ -657,6 +659,8 @@ server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssiz
         return server_do_kill(conn);
     }
 
+    log_debug("upstream handshake sucess");
+
     if (sess->method == SOCKS5_NO_AUTH) {
         return server_upstream_do_request(conn);       
     } else if (sess->method == SOCKS5_AUTH_PASSWORD) {
@@ -681,9 +685,9 @@ server_upstream_do_sub_negotiate(np_connect_t *conn)
     buf[2+sess->ulen] = sess->plen;
     np_memcpy(buf+3+sess->ulen, sess->passwd, sess->plen); 
     
+    log_debug("upstream begin do sub negotiate");
+    
     server_write(conn, buf, 3+sess->ulen+sess->plen);
-
-    log_debug("upstream do sub negotiate");
     
     return SOCKS5_UPSTREAM_SUB_NEGOTIATION;
 }
@@ -694,6 +698,8 @@ server_upstream_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, 
     int err;
 
     s5_session_t *sess = conn->sess;
+
+    sess->state = SOCKS5_CLIENT_AUTH_VERSION;
     
     if (conn->last_status != 0) {
         log_error("upstream send sub-nego mesg  error: %s", 
@@ -703,7 +709,7 @@ server_upstream_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, 
 
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
-        log_error("upstream parse error: %s", socks5_strerror(err));
+        log_error("upstream sub negotiate error: %s", socks5_strerror(err));
         return server_do_kill(conn);
     }
 
@@ -714,7 +720,7 @@ server_upstream_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, 
 
     log_debug("upstream sub negotiation sucess");
 
-    return ;
+    return server_upstream_do_request(conn);
 }
 
 static np_phase_t

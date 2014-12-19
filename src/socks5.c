@@ -204,11 +204,27 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
                         break;
                 }
 
-                sess->state = SOCKS5_CLIENT_REP_VER;
                 err = SOCKS5_OK;
                 goto out;
-
             /* client handshake phase end */
+
+            /* client auth phase start */
+            case SOCKS5_CLIENT_AUTH_VERSION:
+                if (c != SOCKS5_AUTH_PW_VERSION) {
+                    err = SOCKS5_BAD_VERSION;
+                    goto out;
+                }
+                sess->state = SOCKS5_CLIENT_AUTH_STATUS;
+                break;
+                
+            case SOCKS5_CLIENT_AUTH_STATUS:
+                if (c != SOCKS5_AUTH_SUCESS) {
+                    err = SOCKS5_AUTH_ERROR;
+                    goto out;
+                }
+                err = SOCKS5_OK;
+                goto out;
+            /* client auth phase end */
 
         }
     }
