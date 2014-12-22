@@ -95,6 +95,9 @@ typedef struct nproxy_connect
     np_addr_t               srcaddr;
     np_addr_t               dstaddr;
     np_addr_t               remoteaddr;
+    char                    *srcip;
+    char                    *dstip;
+    char                    *remoteip;
     int                     last_status;
     np_iostat_t             rstat;
     np_iostat_t             wstat;
