@@ -47,6 +47,8 @@ static np_phase_t server_upstream_do_sub_negotiate_parse(np_connect_t *conn, con
 static np_phase_t server_upstream_do_request(np_connect_t *conn);
 static np_phase_t server_upstream_do_reply_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_reply(np_connect_t *conn);
+static np_phase_t server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread);
+static np_phase_t server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_kill(np_connect_t *conn);
 static void server_on_close(uv_handle_t *stream);
 static void server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
@@ -93,6 +95,10 @@ server_connect_init(np_connect_t *conn)
     conn->sess = sess;
 
     conn->last_status = 0;
+
+    conn->rstat = np_stop;
+
+    conn->wstat = np_stop;
 
     return NP_OK;
 
@@ -294,6 +300,9 @@ server_do_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         case SOCKS5_UPSTREAM_REPLY:
             new_phase = server_upstream_do_reply_parse(conn, data, nread);
             break;
+        case SOCKS5_PROXY:
+            new_phase = server_do_proxy(conn, data, nread);
+            break;
         case SOCKS5_ALMOST_DEAD:
             new_phase = server_do_kill(conn);
             break;
@@ -386,7 +395,8 @@ server_do_handshake_reply(np_connect_t *conn)
             new_phase = SOCKS5_REQUEST;
             break;
 #endif
-        defaut:
+        case SOCKS5_AUTH_GSSAPI:
+        case SOCKS5_AUTH_REFUSED:
             server_write(conn, "\x05\xff", 2);            
             return server_do_kill(conn);
     }
@@ -433,8 +443,8 @@ server_do_sub_negotiate_reply(np_connect_t *conn)
 {
     s5_session_t *sess = conn->sess;
 
-    if ((strcmp(server.cfg->server->username->data, sess->uname) == 0) && \
-            (strcmp(server.cfg->server->password->data, sess->passwd) == 0)) {
+    if ((strcmp(server.cfg->server->username->data, (char *)&sess->uname) == 0) && \
+            (strcmp(server.cfg->server->password->data, (char *)&sess->passwd) == 0)) {
         log_debug("sub negotiation sucess");
         server_write(conn, "\x01\x00", 2);
         return SOCKS5_REQUEST;
@@ -505,6 +515,8 @@ server_do_request_lookup(np_connect_t *conn)
         server_write(conn, "\5\4\0\1\0\0\0\0\0\0", 10);
         return SOCKS5_ALMOST_DEAD;
     } else {
+        /* Assume the dns lookup always return ipv4 address */
+        conn->dstaddr.addr4.sin_port = htons(conn->sess->dport);
         ip = server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr);
         log_info("lookup %s : %s", conn->sess->daddr, ip);
         np_free(ip);
@@ -585,13 +597,13 @@ server_upstream_do_connect(np_connect_t *conn)
     }
     
     client_ip = server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr);
-    remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)&upstream->dstaddr);
+    remote_ip = server_sockaddr_to_str((struct sockaddr_storage *)&upstream->remoteaddr);
     log_info("%s:%d -> %s:%d -> %s:%d", client_ip, 
                                         ntohs(client->srcaddr.addr4.sin_port), 
                                         proxy->host->data,
                                         proxy->port,
                                         remote_ip,
-                                        ntohs(upstream->dstaddr.addr4.sin_port));
+                                        ntohs(upstream->remoteaddr.addr4.sin_port));
     np_free(client_ip);
     np_free(remote_ip);
 
@@ -800,12 +812,12 @@ server_do_reply(np_connect_t *conn)
     np_context_t *ctx = conn->ctx;
     np_connect_t *client = ctx->client;
     np_connect_t *upstream = conn;
-    
+    /*
     np_assert(client->phase == SOCKS5_PROXY);
     np_assert(client->sess->state == SOCKS5_REQ_DPORT1);
     np_assert(upstream->phase == SOCKS5_UPSTREAM_REPLY);
     np_assert(upstream->sess->state == SOCKS5_CLIENT_REP_BPORT1);
-
+    */
     addr_len = upstream->sess->alen;
 
     buf[0] = SOCKS5_SUPPORT_VERSION;
@@ -815,22 +827,64 @@ server_do_reply(np_connect_t *conn)
     np_memcpy(buf+4, &upstream->sess->baddr, addr_len);
     np_memcpy(buf+4+addr_len, &upstream->sess->bport, 2);
     
+
+    if (upstream->sess->rep != SOCKS5_REP_SUCESS) {
+        /* upstream connect remote failed */
+        log_error("upstream connect remote failed. error id: %d", upstream->sess->rep);
+        client->phase = SOCKS5_ALMOST_DEAD;
+        server_write(client, buf, 6+addr_len);
+        return server_do_kill(upstream);
+    }
+
     /* 
      * send reply mesg to client
      * mesg conetent associated with the result of upstream reply  
      */
     server_write(client, buf, 6+addr_len);
 
-    if (upstream->sess->rep != SOCKS5_REP_SUCESS) {
-        /* upstream connect remote failed */
-        log_error("upstream connect remote failed. error id: %d", upstream->sess->rep);
-        server_do_kill(upstream);
-        return SOCKS5_ALMOST_DEAD;
-    }
-
     log_debug("two-direction socks5 handshake sucess. begin into proxy phase");
     
     return SOCKS5_PROXY;
+}
+
+static np_phase_t
+server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread)
+{
+    if (conn->last_status != 0) {
+        log_error("last write error: %s", 
+                 socks5_strerror(conn->last_status));
+        return server_do_kill(conn);
+    }
+    
+    np_context_t *ctx = conn->ctx;
+    np_connect_t *client = ctx->client;
+    np_connect_t *upstream = ctx->upstream;
+
+    np_assert(client->phase == SOCKS5_PROXY);
+    np_assert(client->sess->state == SOCKS5_REQ_DPORT1);
+    np_assert(upstream->phase == SOCKS5_PROXY);
+    np_assert(upstream->sess->state == SOCKS5_CLIENT_REP_BPORT1);
+    
+    if (conn == client) {
+        return server_do_cycle(client, upstream, data, nread);
+    } else {
+        return server_do_cycle(upstream, client, data, nread);
+    }
+}
+
+static np_phase_t
+server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_t nread)
+{
+    if (nread ==  UV_EOF) {
+        server_do_kill(in);
+        server_do_kill(out);
+        log_notice("request finish");
+        return SOCKS5_DEAD;
+    } else {
+        server_write(out, data, nread);   
+        return SOCKS5_PROXY;
+    }
+    
 }
 
 
@@ -838,6 +892,13 @@ server_do_reply(np_connect_t *conn)
 static np_phase_t
 server_do_kill(np_connect_t *conn)
 {
+    if (conn->wstat == np_busy) {
+        /* wait wirte handle be done then close the connect*/
+        return SOCKS5_ALMOST_DEAD;
+    }
+
+    conn->rstat = np_dead;
+    conn->wstat = np_dead;
     uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
     uv_close((uv_handle_t *)&conn->timer, (uv_close_cb) server_on_close);
     log_debug("do kill");
@@ -858,18 +919,16 @@ static void
 server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
     np_connect_t *conn = stream->data;
-    np_context_t *ctx = conn->ctx;
     np_assert((uv_stream_t *)&conn->handle == stream);
 
     if (nread < 0) {
         if (nread != UV_EOF) {
             UV_SHOW_ERROR(nread, "read error");
+            conn->phase = server_do_kill(conn);
+            return ;
         }
-        server_do_kill(conn);
-        return;
-    } else {
-        server_do_parse(conn, (uint8_t *)buf->base, nread);
     }
+    server_do_parse(conn, (uint8_t *)buf->base, nread);
     np_free(buf->base);
 }
 
@@ -885,14 +944,19 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
 
     conn->write_req.data = conn;
 
+    conn->wstat = np_busy;
+
     r = uv_write(&conn->write_req, (uv_stream_t *)&conn->handle, &buf, 1 , server_on_write_done);
 
     int i;
-
-    for (i=0; i<len; i++) {
-        log_debug("write: %02X", data[i]);
+    
+    if (conn->phase == SOCKS5_PROXY) {
+        log_debug("write: %s", data);
+    } else {
+        for (i=0; i<len; i++) {
+            log_debug("write: %02X", data[i]);
+        }
     }
-
 
     if (r < 0) {
         UV_SHOW_ERROR(r, "write error");
@@ -911,6 +975,8 @@ server_on_write_done(uv_write_t *req, int status)
     conn = req->data;
 
     conn->last_status = status;
+
+    conn->wstat = np_done;
     
     server_do_callback(conn);
 }

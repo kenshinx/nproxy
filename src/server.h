@@ -59,6 +59,13 @@ typedef union {
 } np_addr_t;
 
 typedef enum {
+    np_busy,
+    np_done,
+    np_stop,
+    np_dead,
+} np_iostat_t;
+
+typedef enum {
     SOCKS5_HANDSHAKE,
     SOCKS5_SUB_NEGOTIATION,
     SOCKS5_REQUEST,
@@ -89,7 +96,8 @@ typedef struct nproxy_connect
     np_addr_t               dstaddr;
     np_addr_t               remoteaddr;
     int                     last_status;
-    char                    buf[2048];
+    np_iostat_t             rstat;
+    np_iostat_t             wstat;
 } np_connect_t;
 
 typedef struct nproxy_context {
