@@ -752,6 +752,8 @@ server_upstream_do_request(np_connect_t *conn)
         np_memcpy(buf+4, &conn->remoteaddr.addr6.sin6_addr, 16);
         np_memcpy(buf+20, &conn->remoteaddr.addr6.sin6_port, 2);
         server_write(conn, buf, 22);
+    } else {
+        NOT_REACHED();
     }
     log_debug("upstream send request sucess");
     return SOCKS5_UPSTREAM_REPLY;
