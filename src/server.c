@@ -864,8 +864,10 @@ server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 
     np_assert(client->phase == SOCKS5_PROXY);
     np_assert(client->sess->state == SOCKS5_REQ_DPORT1);
+    /*
     np_assert(upstream->phase == SOCKS5_PROXY);
     np_assert(upstream->sess->state == SOCKS5_CLIENT_REP_BPORT1);
+    */
 
 
     
@@ -1091,6 +1093,8 @@ server_on_new_connect(uv_stream_t *us, int status)
 
     uv_tcp_init(us->loop, &client->handle);
     uv_timer_init(us->loop, &client->timer);
+
+    uv_tcp_keepalive(&client->handle, 0, 1);
     
     err = uv_accept((uv_stream_t *)us, (uv_stream_t *)&client->handle);
     if (err) {
