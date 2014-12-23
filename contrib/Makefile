@@ -12,7 +12,7 @@ ROOT := $(shell sh -c 'cd .. ; pwd')
 LIBYAML=yaml-0.1.5
 HIREDIS=hiredis-0.11.0
 JANSSON=jansson-2.6
-LIBUV=libuv-1.0.0-rc1
+LIBUV=libuv-v1.0.2
 
 
 
