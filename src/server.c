@@ -49,8 +49,9 @@ static np_phase_t server_upstream_do_reply_parse(np_connect_t *conn, const uint8
 static np_phase_t server_do_reply(np_connect_t *conn);
 static np_phase_t server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_t nread);
-static np_phase_t server_do_kill(np_connect_t *conn);
-static void server_on_close(uv_handle_t *stream);
+static void  server_do_kill(np_context_t *ctx);
+static void server_conn_close(np_connect_t *conn);
+static void server_on_close(uv_handle_t *handle);
 static void server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_write(np_connect_t *conn, const char *data, unsigned int len);
@@ -93,6 +94,8 @@ server_connect_init(np_connect_t *conn)
         return NP_ERROR;
     }
     conn->sess = sess;
+
+    conn->phase = SOCKS5_INIT;
 
     conn->last_status = 0;
 
@@ -147,8 +150,6 @@ server_context_init(np_context_t *ctx)
 static void
 server_context_deinit(np_context_t *ctx)
 {
-    server_connect_deinit(ctx->client);
-    server_connect_deinit(ctx->upstream);
     np_free(ctx);
 }
 
@@ -311,7 +312,8 @@ server_do_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
             new_phase = server_do_proxy(conn, data, nread);
             break;
         case SOCKS5_ALMOST_DEAD:
-            new_phase = server_do_kill(conn);
+            server_do_kill(conn->ctx);
+            new_phase = SOCKS5_DEAD;
             break;
         case SOCKS5_DEAD:
             log_error("socks5 dead");
@@ -340,7 +342,8 @@ server_do_callback(np_connect_t *conn)
             new_phase = server_upstream_do_handshake(conn);
             break;
         case SOCKS5_ALMOST_DEAD:
-            new_phase = server_do_kill(conn);
+            server_do_kill(conn->ctx);
+            new_phase = SOCKS5_DEAD;
             break;
         case SOCKS5_DEAD:
             log_error("socks5 dead");
@@ -364,12 +367,14 @@ server_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("handshake error: %s", socks5_strerror(err));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     if (nread != 0) {
         log_error("junk in handshake phase");
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     return server_do_handshake_reply(conn);
@@ -405,7 +410,8 @@ server_do_handshake_reply(np_connect_t *conn)
         case SOCKS5_AUTH_GSSAPI:
         case SOCKS5_AUTH_REFUSED:
             server_write(conn, "\x05\xff", 2);            
-            return server_do_kill(conn);
+            server_do_kill(conn->ctx);
+            return SOCKS5_DEAD;
     }
 
     log_debug("handshake sucesss");
@@ -425,18 +431,21 @@ server_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, ssize_t n
 
     if (conn->last_status != 0 ) {
         log_error("last phase error: %s", socks5_strerror(conn->last_status));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
   
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("sub negotiate error: %s", socks5_strerror(err));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     if (nread != 0) {
         log_error("junk in sub negotiation phase");
-        return server_do_kill(conn);
+        server_do_kill(conn);
+        return SOCKS5_DEAD;
     }
 
     log_debug("sub negotiate usename:%s, password:%s", sess->uname, sess->passwd);
@@ -473,18 +482,21 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 
     if (conn->last_status != 0 ) {
         log_error("last phase error: %s", socks5_strerror(conn->last_status));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("request parse error: %s", socks5_strerror(err));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     if (nread != 0 ) {
         log_error("junk in request phase");
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     if (sess->atyp == SOCKS5_ATYP_DOMAIN) {
@@ -557,7 +569,8 @@ server_do_request_verify(np_connect_t *conn)
 
     if (r<0) {
         UV_SHOW_ERROR(r, "connect error");
-        return server_do_kill(conn);
+        server_do_kill(conn);
+        return SOCKS5_DEAD;
     }
 
     return SOCKS5_WAIT_CONN;
@@ -667,18 +680,21 @@ server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssiz
     if (conn->last_status != 0) {
         log_error("upstream do handshake phase error: %s", 
                  socks5_strerror(conn->last_status));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("upstream parse error: %s", socks5_strerror(err));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     if (nread != 0) {
         log_error("junk in upstream handshake phase");
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     log_debug("upstream (%s) handshake sucess", conn->dstip);
@@ -689,7 +705,8 @@ server_upstream_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssiz
         return server_upstream_do_sub_negotiate(conn);
     } else {
         log_error("unsupport auth method.");
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 }
 
@@ -726,18 +743,21 @@ server_upstream_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, 
     if (conn->last_status != 0) {
         log_error("upstream (%s) send sub-nego mesg  error: %s", 
                  conn->dstip, socks5_strerror(conn->last_status));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("upstream (%s) sub negotiate error: %s", conn->dstip, socks5_strerror(err));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     if (nread != 0) {
         log_error("junk in upstream handshake phase");
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     log_debug("upstream (%s) sub negotiation sucess", conn->dstip);
@@ -789,19 +809,22 @@ server_upstream_do_reply_parse(np_connect_t *conn, const uint8_t *data, ssize_t 
     if (conn->last_status != 0) {
         log_error("upstream (%s) send request mesg  error: %s", 
                  conn->dstip, socks5_strerror(conn->last_status));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     err = socks5_parse(sess, &data, &nread);
     if (err != SOCKS5_OK) {
         log_error("upstream (%s) reply phase error: %s", 
                  conn->dstip, socks5_strerror(err));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     if (nread != 0) {
         log_error("junk in upstream handshake phase");
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     log_debug("upstream (%s) parse reply sucess", conn->dstip);
@@ -835,7 +858,8 @@ server_do_reply(np_connect_t *conn)
                 upstream->remoteip, upstream->sess->rep);
         client->phase = SOCKS5_ALMOST_DEAD;
         server_write(client, buf, 6+addr_len);
-        return server_do_kill(upstream);
+        server_do_kill(ctx);
+        return SOCKS5_DEAD;
     }
 
     /* 
@@ -855,7 +879,8 @@ server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread)
     if (conn->last_status != 0) {
         log_error("last write error: %s", 
                  socks5_strerror(conn->last_status));
-        return server_do_kill(conn);
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
     
     np_context_t *ctx = conn->ctx;
@@ -884,9 +909,8 @@ server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_
     log_debug("write: %zd bytes", nread);
 
     if (nread ==  UV_EOF) {
-        server_do_kill(in);
-        server_do_kill(out);
         log_info("REQUEST (%s) FINISHED", out->remoteip);
+        server_do_kill(in->ctx);
         return SOCKS5_DEAD;
     } else {
         server_write(out, data, nread);   
@@ -895,32 +919,44 @@ server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_
     
 }
 
-static np_phase_t
-server_do_kill(np_connect_t *conn)
+static void
+server_do_kill(np_context_t *ctx)
 {
-    if (conn->wstat == np_busy) {
+    server_conn_close(ctx->client);
+    server_conn_close(ctx->upstream);
+    
+    server_context_deinit(ctx);
+
+}
+
+static void
+server_conn_close(np_connect_t *conn)
+{
+    //if (conn->wstat == np_busy) {
         /* wait wirte handle be done then close the connect*/
-        return SOCKS5_ALMOST_DEAD;
+    //    return SOCKS5_ALMOST_DEAD;
+    //}
+    
+    if (conn->phase > SOCKS5_INIT) {
+        conn->handle.data = conn;
+        conn->timer.data = conn;
+        uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
+        uv_close((uv_handle_t *)&conn->timer, (uv_close_cb) server_on_close);
+        log_info("CONNECT TERMINATE (%s -> %s)", conn->srcip, conn->dstip);
+        
     }
 
     conn->rstat = np_dead;
     conn->wstat = np_dead;
-    uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
-    uv_close((uv_handle_t *)&conn->timer, (uv_close_cb) server_on_close);
+    conn->phase = SOCKS5_DEAD;
 
-    log_info("CONNECT TERMINATE (%s -> %s)", conn->srcip, conn->dstip);
-
-    return SOCKS5_DEAD;
+    server_connect_deinit(conn);
 }
 
 static void
-server_on_close(uv_handle_t *stream)
+server_on_close(uv_handle_t *handle)
 {
-    /* todo 
-    np_context_t *ctx = (np_context_t *)sess->handle->data;
-    server_context_deinit(ctx);
-    */
-    return;
+    return ;
 }
 
 static void
@@ -932,8 +968,7 @@ server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
     if (nread < 0) {
         if (nread != UV_EOF) {
             UV_SHOW_ERROR(nread, "read error");
-            conn->phase = server_do_kill(conn);
-            return ;
+            server_do_kill(conn->ctx);
         }
     }
     server_do_parse(conn, (uint8_t *)buf->base, nread);

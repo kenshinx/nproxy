@@ -12,7 +12,7 @@
 #include "socks5.h"
 
 #define NPROXY_PROXY_POOL_LENGTH 200
-#define MAX_CONNECT_QUEUE 512
+#define MAX_CONNECT_QUEUE 2048
 
 //#define ENABLE_SOCKS5_SERVER_AUTH
 #define ENABLE_SOCKS5_CLIENT_AUTH
@@ -66,6 +66,8 @@ typedef enum {
 } np_iostat_t;
 
 typedef enum {
+    SOCKS5_INIT,
+
     SOCKS5_HANDSHAKE,
     SOCKS5_SUB_NEGOTIATION,
     SOCKS5_REQUEST,
