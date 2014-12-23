@@ -52,6 +52,7 @@ static np_phase_t server_do_cycle(np_connect_t *in, np_connect_t *out, const uin
 static void  server_do_kill(np_context_t *ctx);
 static void server_conn_close(np_connect_t *conn);
 static void server_on_close(uv_handle_t *handle);
+static void server_on_shutdown(uv_shutdown_t* req, int status);
 static void server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_write(np_connect_t *conn, const char *data, unsigned int len);
@@ -410,8 +411,8 @@ server_do_handshake_reply(np_connect_t *conn)
         case SOCKS5_AUTH_GSSAPI:
         case SOCKS5_AUTH_REFUSED:
             server_write(conn, "\x05\xff", 2);            
-            server_do_kill(conn->ctx);
-            return SOCKS5_DEAD;
+            new_phase = SOCKS5_ALMOST_DEAD;
+            break;
     }
 
     log_debug("handshake sucesss");
@@ -858,7 +859,7 @@ server_do_reply(np_connect_t *conn)
                 upstream->remoteip, upstream->sess->rep);
         client->phase = SOCKS5_ALMOST_DEAD;
         server_write(client, buf, 6+addr_len);
-        server_do_kill(ctx);
+        //server_do_kill(ctx);
         return SOCKS5_DEAD;
     }
 
@@ -947,12 +948,18 @@ server_conn_close(np_connect_t *conn)
     
     /* Before closed.  Make sure the connect has been established */
     if (conn->phase > SOCKS5_INIT) {
-        conn->handle.data = conn;
-        conn->timer.data = conn;
-        uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
+        uv_read_stop((uv_stream_t *)&conn->handle);
+        uv_shutdown_t *req = np_malloc(sizeof(uv_shutdown_t));
+        req->data = conn;
+        int n = uv_shutdown(req, (uv_stream_t *)&conn->handle, server_on_shutdown);
+        if (n){
+            uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
+            np_free(req);
+        
+        }
+
         uv_close((uv_handle_t *)&conn->timer, (uv_close_cb) server_on_close);
         log_info("CONNECT TERMINATE (%s -> %s)", conn->srcip, conn->dstip);
-        
     }
 
     conn->rstat = np_dead;
@@ -966,6 +973,12 @@ static void
 server_on_close(uv_handle_t *handle)
 {
     return ;
+}
+
+static void
+server_on_shutdown(uv_shutdown_t* req, int status)
+{
+    return;
 }
 
 static void
