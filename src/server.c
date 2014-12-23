@@ -925,18 +925,27 @@ server_do_kill(np_context_t *ctx)
     server_conn_close(ctx->client);
     server_conn_close(ctx->upstream);
     
-    server_context_deinit(ctx);
+    if (ctx->client->phase == SOCKS5_DEAD && ctx->upstream->phase) {
+        server_context_deinit(ctx);
+    }
 
 }
 
 static void
 server_conn_close(np_connect_t *conn)
 {
-    //if (conn->wstat == np_busy) {
-        /* wait wirte handle be done then close the connect*/
-    //    return SOCKS5_ALMOST_DEAD;
-    //}
+    /* Return immediately if connectted has been closed*/
+    if (conn->phase == SOCKS5_DEAD) {
+        return;
+    }
+
+    if (conn->wstat == np_busy) {
+        /* Wait wirte handle be done then close the connect*/
+        conn->phase = SOCKS5_ALMOST_DEAD;
+        return;
+    }
     
+    /* Before closed.  Make sure the connect has been established */
     if (conn->phase > SOCKS5_INIT) {
         conn->handle.data = conn;
         conn->timer.data = conn;
