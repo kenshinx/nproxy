@@ -946,42 +946,46 @@ server_conn_close(np_connect_t *conn)
 
     /* Before closed.  Make sure the connect has been established */
     if (conn->phase > SOCKS5_INIT) {
+        /*
         uv_read_stop((uv_stream_t *)&conn->handle);
-       
+         
         uv_shutdown_t *req = np_malloc(sizeof(uv_shutdown_t));
         req->data = conn;
         int n = uv_shutdown(req, (uv_stream_t *)&conn->handle, server_on_shutdown);
         if (n){
             uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
             np_free(req);
-        
         }
+        */
         
         /*
         if (!uv_is_closing((uv_handle_t *)&conn->handle)) {
             uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
         }
         */
-        uv_close((uv_handle_t *)&conn->timer, (uv_close_cb) server_on_close);
+        uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
+        uv_close((uv_handle_t *)&conn->timer, NULL);
         log_info("CONNECT TERMINATE (%s -> %s)", conn->srcip, conn->dstip);
     }
 
     conn->rstat = np_dead;
     conn->wstat = np_dead;
     conn->phase = SOCKS5_DEAD;
-
-    server_connect_deinit(conn);
 }
 
 static void
 server_on_close(uv_handle_t *handle)
 {
+    np_connect_t *conn = handle->data;
+    server_connect_deinit(conn);
     return ;
 }
 
 static void
 server_on_shutdown(uv_shutdown_t* req, int status)
 {
+    np_connect_t *conn = req->data;
+    server_connect_deinit(conn);
     return;
 }
 
