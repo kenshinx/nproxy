@@ -314,8 +314,7 @@ server_do_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
             break;
         case SOCKS5_ALMOST_DEAD:
             server_do_kill(conn->ctx);
-            new_phase = SOCKS5_DEAD;
-            break;
+            return;
         case SOCKS5_DEAD:
             log_error("socks5 dead");
             return;
@@ -344,8 +343,7 @@ server_do_callback(np_connect_t *conn)
             break;
         case SOCKS5_ALMOST_DEAD:
             server_do_kill(conn->ctx);
-            new_phase = SOCKS5_DEAD;
-            break;
+            return;
         case SOCKS5_DEAD:
             log_error("socks5 dead");
             return;
@@ -644,7 +642,8 @@ server_upstream_do_handshake(np_connect_t *conn)
     if (conn->last_status != 0 ) {
         log_error("connect upstream '%s' error: %s", 
                 conn->dstip, socks5_strerror(conn->last_status));
-        return SOCKS5_ALMOST_DEAD;
+        server_do_kill(conn->ctx);
+        return SOCKS5_DEAD;
     }
 
     log_debug("connect sucess with upstream (%s)", conn->dstip);
@@ -662,8 +661,6 @@ server_upstream_do_handshake(np_connect_t *conn)
      /* V5\Auth_Field_Len:1\No_Auth */
     server_write(conn, "\5\1\0", 3);
 #endif
-
-    conn->phase = SOCKS5_UPSTREAM_HANDSHAKE;
 
     return SOCKS5_UPSTREAM_HANDSHAKE;
 }
@@ -935,10 +932,6 @@ server_do_kill(np_context_t *ctx)
 static void
 server_conn_close(np_connect_t *conn)
 {
-    /* Return immediately if connectted has been closed*/
-    if (conn->phase == SOCKS5_DEAD) {
-        return;
-    }
 
     if (conn->wstat == np_busy) {
         /* Wait wirte handle be done then close the connect*/
@@ -946,9 +939,15 @@ server_conn_close(np_connect_t *conn)
         return;
     }
     
+    /* Return immediately if connectted has been closed*/
+    if (conn->phase == SOCKS5_DEAD) {
+        return;
+    }
+
     /* Before closed.  Make sure the connect has been established */
     if (conn->phase > SOCKS5_INIT) {
         uv_read_stop((uv_stream_t *)&conn->handle);
+       
         uv_shutdown_t *req = np_malloc(sizeof(uv_shutdown_t));
         req->data = conn;
         int n = uv_shutdown(req, (uv_stream_t *)&conn->handle, server_on_shutdown);
@@ -957,7 +956,12 @@ server_conn_close(np_connect_t *conn)
             np_free(req);
         
         }
-
+        
+        /*
+        if (!uv_is_closing((uv_handle_t *)&conn->handle)) {
+            uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
+        }
+        */
         uv_close((uv_handle_t *)&conn->timer, (uv_close_cb) server_on_close);
         log_info("CONNECT TERMINATE (%s -> %s)", conn->srcip, conn->dstip);
     }
@@ -1151,7 +1155,7 @@ server_on_new_connect(uv_stream_t *us, int status)
     uv_tcp_init(us->loop, &client->handle);
     uv_timer_init(us->loop, &client->timer);
 
-    uv_tcp_keepalive(&client->handle, 0, 1);
+    //uv_tcp_keepalive(&client->handle, 0, 1);
     
     err = uv_accept((uv_stream_t *)us, (uv_stream_t *)&client->handle);
     if (err) {
