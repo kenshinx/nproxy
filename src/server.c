@@ -51,7 +51,6 @@ static np_phase_t server_do_cycle(np_connect_t *in, np_connect_t *out, const uin
 static void server_do_kill(np_context_t *ctx);
 static void server_conn_close(np_connect_t *conn);
 static void server_on_close(uv_handle_t *handle);
-static void server_on_shutdown(uv_shutdown_t* req, int status);
 static void server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handle /*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_write(np_connect_t *conn, const char *data, unsigned int len);
@@ -322,7 +321,7 @@ server_do_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
             server_do_kill(conn->ctx);
             return;
         case SOCKS5_DEAD:
-            log_error("socks5 dead");
+            log_error("socks5 has dead");
             return;
         default :
             return;
@@ -334,6 +333,8 @@ static void
 server_do_callback(np_connect_t *conn)
 {   
     int new_phase;
+
+    //log_error("callback called: %d", conn->phase);
 
     switch (conn->phase) {
         case SOCKS5_WAIT_LOOKUP:
@@ -351,7 +352,7 @@ server_do_callback(np_connect_t *conn)
             server_do_kill(conn->ctx);
             return;
         case SOCKS5_DEAD:
-            log_error("socks5 dead");
+            log_error("socks5 has dead");
             return;
         default:
             return;
@@ -635,7 +636,8 @@ server_upstream_do_connect(np_connect_t *conn)
         UV_SHOW_ERROR(err, "libuv upstream read error");
     }
 
-    return SOCKS5_PROXY;
+    /*client handshake ready. wait upstream handshake finished*/
+    return SOCKS5_WAIT_PROXY;
 }
 
 static np_phase_t 
@@ -861,7 +863,6 @@ server_do_reply(np_connect_t *conn)
                 upstream->remoteip, upstream->sess->rep);
         client->phase = SOCKS5_ALMOST_DEAD;
         server_write(client, buf, 6+addr_len);
-        //server_do_kill(ctx);
         return SOCKS5_DEAD;
     }
 
@@ -872,6 +873,9 @@ server_do_reply(np_connect_t *conn)
     server_write(client, buf, 6+addr_len);
 
     log_debug("nproxy handshake sucess. begin into proxy phase");
+
+    client->phase = SOCKS5_PROXY;
+    upstream->phase = SOCKS5_PROXY;
     
     return SOCKS5_PROXY;
 }
@@ -891,9 +895,9 @@ server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread)
     np_connect_t *upstream = ctx->upstream;
 
     np_assert(client->phase == SOCKS5_PROXY);
-    np_assert(client->sess->state == SOCKS5_REQ_DPORT1);
-    /*
     np_assert(upstream->phase == SOCKS5_PROXY);
+    /*
+    np_assert(client->sess->state == SOCKS5_REQ_DPORT1);
     np_assert(upstream->sess->state == SOCKS5_CLIENT_REP_BPORT1);
     */
 
@@ -928,7 +932,7 @@ server_do_kill(np_context_t *ctx)
     server_conn_close(ctx->client);
     server_conn_close(ctx->upstream);
     
-    if (ctx->client->phase == SOCKS5_DEAD && ctx->upstream->phase) {
+    if (ctx->client->phase == SOCKS5_DEAD && ctx->upstream->phase == SOCKS5_DEAD) {
         server_context_deinit(ctx);
     }
 
@@ -949,10 +953,15 @@ server_conn_close(np_connect_t *conn)
         return;
     }
 
+    if (conn->phase == SOCKS5_WAIT_LOOKUP) {
+        uv_cancel((uv_req_t *)&conn->addrinfo_req);
+    }
+
     /* Before closed.  Make sure the connect has been established */
     if (conn->phase > SOCKS5_INIT) {
         uv_read_stop((uv_stream_t *)&conn->handle);
-         
+        
+        /*
         uv_shutdown_t *req = np_malloc(sizeof(uv_shutdown_t));
         req->data = conn;
         int n = uv_shutdown(req, (uv_stream_t *)&conn->handle, server_on_shutdown);
@@ -960,13 +969,14 @@ server_conn_close(np_connect_t *conn)
             uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
             np_free(req);
         }
+        */
         
         /*
         if (!uv_is_closing((uv_handle_t *)&conn->handle)) {
             uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
         }
         */
-        //uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
+        uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
         uv_close((uv_handle_t *)&conn->timer, NULL);
         log_info("CONNECT TERMINATE (%s -> %s)", conn->srcip, conn->dstip);
     }
@@ -985,15 +995,6 @@ server_on_close(uv_handle_t *handle)
 }
 
 static void
-server_on_shutdown(uv_shutdown_t* req, int status)
-{
-    np_connect_t *conn = req->data;
-    conn->last_status = status;
-    server_connect_deinit(conn);
-    return;
-}
-
-static void
 server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 {
     np_connect_t *conn = stream->data;
@@ -1003,6 +1004,7 @@ server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
         if (nread != UV_EOF) {
             UV_SHOW_ERROR(nread, "read error");
             server_do_kill(conn->ctx);
+            return;
         }
     }
     server_do_parse(conn, (uint8_t *)buf->base, nread);
@@ -1048,10 +1050,20 @@ static void
 server_on_write_done(uv_write_t *req, int status)
 {
     np_connect_t *conn;
+
+    if (status == UV_ECANCELED) {
+        return;
+    }
     
     conn = req->data;
 
     conn->last_status = status;
+    if (status != 0) {
+        log_warn("write error");
+        //conn->phase = SOCKS5_ALMOST_DEAD;
+        server_do_kill(conn->ctx);
+        return;
+    }
 
     conn->wstat = np_done;
     
