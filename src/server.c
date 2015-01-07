@@ -53,7 +53,7 @@ static void server_conn_close(np_connect_t *conn);
 static void server_on_close(uv_handle_t *handle);
 static void server_on_shutdown(uv_shutdown_t* req, int status);
 static void server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf);
-static uv_buf_t *server_on_alloc_cb(uv_handle_t *handler/*handle*/, size_t suggested_size, uv_buf_t* buf); 
+static uv_buf_t *server_on_alloc_cb(uv_handle_t *handle /*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_write(np_connect_t *conn, const char *data, unsigned int len);
 static void server_on_write_done(uv_write_t *req, int status);
 static void server_get_addrinfo(np_connect_t *conn, const char *hostname); 
@@ -209,7 +209,7 @@ server_get_proxy()
 }
 
 static uv_buf_t *
-server_on_alloc_cb(uv_handle_t *handle /*handle*/, size_t suggested_size, uv_buf_t* buf) 
+server_on_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t* buf) 
 {
     *buf = uv_buf_init((char*) np_malloc(suggested_size), suggested_size);
     np_assert(buf->base != NULL);
@@ -258,18 +258,18 @@ server_sockaddr_to_str(struct sockaddr_storage *addr, char *ip)
         err = uv_ip4_name((struct sockaddr_in *)addr, ip, INET_ADDRSTRLEN);
         if (err) {
             np_free(ip);
-            return NULL;
+            return NP_ERROR;
         }
         
     } else if (addr->ss_family == AF_INET6) {
         err = uv_ip6_name((struct sockaddr_in6 *)addr, ip, INET6_ADDRSTRLEN); 
         if (err) {
             np_free(ip);
-            return NULL;
+            return NP_ERROR;
         }
     }
 
-    return ip;
+    return NP_OK;
 }
 
 /*
@@ -449,7 +449,7 @@ server_do_sub_negotiate_parse(np_connect_t *conn, const uint8_t *data, ssize_t n
 
     if (nread != 0) {
         log_error("junk in sub negotiation phase");
-        server_do_kill(conn);
+        server_do_kill(conn->ctx);
         return SOCKS5_DEAD;
     }
 
@@ -505,7 +505,7 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
     }
 
     if (sess->atyp == SOCKS5_ATYP_DOMAIN) {
-        server_get_addrinfo(conn, sess->daddr);
+        server_get_addrinfo(conn, (const char *)sess->daddr);
         return SOCKS5_WAIT_LOOKUP;
     }
     
@@ -524,7 +524,7 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
         memcpy(&addr->sin6_addr, sess->daddr, sizeof(addr->sin6_addr));
     }
 
-    server_sockaddr_to_str((struct sockaddr_storage *)&conn->remoteaddr, &conn->remoteip);
+    server_sockaddr_to_str((struct sockaddr_storage *)&conn->remoteaddr, (char *)&conn->remoteip);
 
     log_debug("request parse sucess");
 
@@ -534,7 +534,6 @@ server_do_request_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 static np_phase_t
 server_do_request_lookup(np_connect_t *conn)
 {
-    char *ip;
 
     if (conn->last_status != 0 ) {
         log_error("LOOKUP for %s error: %s", conn->sess->daddr, socks5_strerror(conn->last_status));
@@ -543,7 +542,7 @@ server_do_request_lookup(np_connect_t *conn)
     } else {
         /* Assume the dns lookup always return ipv4 address */
         conn->remoteaddr.addr4.sin_port = htons(conn->sess->dport);
-        server_sockaddr_to_str((struct sockaddr_storage *)&conn->remoteaddr, &conn->remoteip);
+        server_sockaddr_to_str((struct sockaddr_storage *)&conn->remoteaddr, (char *)&conn->remoteip);
         log_info("LOOKUP %s -> %s", conn->sess->daddr, conn->remoteip);
         return server_upstream_do_connect(conn);
     }
@@ -600,10 +599,10 @@ server_upstream_do_connect(np_connect_t *conn)
     upstream = ctx->upstream;
 
     np_memcpy(&upstream->remoteaddr, &client->remoteaddr, sizeof(client->remoteaddr));
-    server_sockaddr_to_str((struct sockaddr_storage *)&upstream->remoteaddr, &upstream->remoteip);
+    server_sockaddr_to_str((struct sockaddr_storage *)&upstream->remoteaddr, (char *)&upstream->remoteip);
 
     uv_ip4_addr(proxy->host->data, proxy->port, &upstream->dstaddr.addr4);
-    server_sockaddr_to_str((struct sockaddr_storage *)&upstream->dstaddr, &upstream->dstip);
+    server_sockaddr_to_str((struct sockaddr_storage *)&upstream->dstaddr, (char *)&upstream->dstip);
     
 
     uv_tcp_init(server.loop, &upstream->handle);
@@ -643,7 +642,7 @@ static np_phase_t
 server_upstream_do_handshake(np_connect_t *conn)
 {
 
-    server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr, &conn->dstip);
+    server_sockaddr_to_str((struct sockaddr_storage *)&conn->dstaddr,(char *)&conn->dstip);
 
     if (conn->last_status != 0 ) {
         log_error("connect upstream '%s' error: %s", 
@@ -656,7 +655,7 @@ server_upstream_do_handshake(np_connect_t *conn)
 
     /* set upstream->srcaddr */
     server_get_sockaddr((uv_stream_t *)&conn->handle, &conn->srcaddr.addr);
-    server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr, &conn->srcip);
+    server_sockaddr_to_str((struct sockaddr_storage *)&conn->srcaddr, (char *)&conn->srcip);
 
     log_debug("upstream (%s) beigin handshake", conn->dstip);
 
@@ -917,7 +916,7 @@ server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_
         server_do_kill(in->ctx);
         return SOCKS5_DEAD;
     } else {
-        server_write(out, data, nread);   
+        server_write(out, (const char *)data, nread);   
         return SOCKS5_PROXY;
     }
     
@@ -952,7 +951,6 @@ server_conn_close(np_connect_t *conn)
 
     /* Before closed.  Make sure the connect has been established */
     if (conn->phase > SOCKS5_INIT) {
-        /*
         uv_read_stop((uv_stream_t *)&conn->handle);
          
         uv_shutdown_t *req = np_malloc(sizeof(uv_shutdown_t));
@@ -962,14 +960,13 @@ server_conn_close(np_connect_t *conn)
             uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
             np_free(req);
         }
-        */
         
         /*
         if (!uv_is_closing((uv_handle_t *)&conn->handle)) {
             uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
         }
         */
-        uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
+        //uv_close((uv_handle_t *)&conn->handle, (uv_close_cb) server_on_close);
         uv_close((uv_handle_t *)&conn->timer, NULL);
         log_info("CONNECT TERMINATE (%s -> %s)", conn->srcip, conn->dstip);
     }
@@ -991,6 +988,7 @@ static void
 server_on_shutdown(uv_shutdown_t* req, int status)
 {
     np_connect_t *conn = req->data;
+    conn->last_status = status;
     server_connect_deinit(conn);
     return;
 }
@@ -1017,8 +1015,9 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
 
     uv_buf_t buf;
     int r;
+    unsigned int i;
 
-    buf.base = data;
+    buf.base = (char *)data;
     buf.len = len;
 
     conn->write_req.data = conn;
@@ -1027,7 +1026,6 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
 
     r = uv_write(&conn->write_req, (uv_stream_t *)&conn->handle, &buf, 1 , server_on_write_done);
 
-    int i;
 
     if (conn->phase == SOCKS5_PROXY) {
         log_debug("write: %s", data);
@@ -1118,7 +1116,7 @@ server_connect(np_connect_t *conn)
 
     r = uv_tcp_connect(&conn->connect_req,
                        &conn->handle, 
-                       &conn->dstaddr, 
+                       (const struct sockaddr*)&conn->dstaddr, 
                        server_on_connect_done);
     return r;
     
@@ -1178,14 +1176,14 @@ server_on_new_connect(uv_stream_t *us, int status)
         UV_SHOW_ERROR(err, "libuv on get peeraddr");
         return;
     }
-    server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr, &client->srcip);
+    server_sockaddr_to_str((struct sockaddr_storage *)&client->srcaddr, (char *)&client->srcip);
 
     err = server_get_sockaddr((uv_stream_t *)&client->handle, &client->dstaddr.addr);
     if (err) {
         UV_SHOW_ERROR(err, "libuv on get sockaddr");
         return ;
     }
-    server_sockaddr_to_str((struct sockaddr_storage *)&client->dstaddr, &client->dstip);
+    server_sockaddr_to_str((struct sockaddr_storage *)&client->dstaddr, (char *)&client->dstip);
 
     client->handle.data = client;
     client->phase = SOCKS5_HANDSHAKE;

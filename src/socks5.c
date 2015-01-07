@@ -6,7 +6,7 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
 {
     s5_error_t err;
     uint8_t c;
-    uint8_t *p;
+    const uint8_t *p;
     size_t n;
     size_t i;
     
