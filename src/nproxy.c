@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <signal.h>
 #include <sys/types.h>
 
 #include "array.h"
@@ -91,6 +92,47 @@ np_print_run()
     log_stdout("config file: %s", server.configfile);
 }
 
+static void
+np_handle_signal(int sig)
+{
+    char *msg;
+    
+    switch (sig) {
+        case SIGINT:
+            log_notice("Received SIGINT scheduling shutdown...");
+            break;
+        case SIGTERM:
+            log_notice("Received SIGTERM scheduling shutdown...");
+            break;
+        case SIGPROF:
+            log_notice("Received SIGPROF scheduling shutdown...");
+            break;
+        default:
+            log_notice("Received shutdown signal, scheduling shutdown...");
+    }
+
+    server_stop();
+
+    if (sig == SIGINT) {
+        exit(1);
+    } else {
+        exit(0);
+    }
+}
+
+static void
+np_setup_signal()
+{
+    struct sigaction act;
+    
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    act.sa_handler = np_handle_signal;
+    sigaction(SIGTERM, &act, NULL);
+    sigaction(SIGINT, &act, NULL);
+    sigaction(SIGPROF, &act, NULL);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -98,6 +140,8 @@ main(int argc, char **argv)
     np_status_t status;
     
     log_init();
+
+    np_setup_signal();
 
     status = server_init();
     if (status != NP_OK) {

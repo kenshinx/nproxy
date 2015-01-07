@@ -29,7 +29,6 @@ static np_status_t server_load_proxy_pool();
 static np_status_t server_get_peeraddr(uv_stream_t *handle, struct sockaddr *addr);
 static np_status_t server_get_sockaddr(uv_stream_t *handle, struct sockaddr *addr);
 static np_status_t server_sockaddr_to_str(struct sockaddr_storage *addr, char *ip);
-//static char *server_get_remote_ip(uv_stream_t *handle);
 static void server_do_parse(np_connect_t *conn, const uint8_t *buf, ssize_t nread);
 static void server_do_callback(np_connect_t *conn);
 static np_phase_t server_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread);
@@ -49,7 +48,7 @@ static np_phase_t server_upstream_do_reply_parse(np_connect_t *conn, const uint8
 static np_phase_t server_do_reply(np_connect_t *conn);
 static np_phase_t server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread);
 static np_phase_t server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_t nread);
-static void  server_do_kill(np_context_t *ctx);
+static void server_do_kill(np_context_t *ctx);
 static void server_conn_close(np_connect_t *conn);
 static void server_on_close(uv_handle_t *handle);
 static void server_on_shutdown(uv_shutdown_t* req, int status);
@@ -83,6 +82,13 @@ server_init()
     server.debug = false;
 
     return NP_OK;
+}
+
+void 
+server_deinit()
+{
+    config_destroy(server.cfg);
+    array_destroy(server.proxy_pool);
 }
 
 static np_status_t 
@@ -1214,6 +1220,16 @@ server_setup()
 
     return NP_OK;
 }
+
+void 
+server_stop()
+{
+
+    log_debug("server stopping");
+    uv_stop(server.loop);
+    server_deinit();
+}
+
 
 void
 server_run()

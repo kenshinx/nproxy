@@ -124,7 +124,9 @@ struct nproxy_server {
 extern struct nproxy_server server;
 
 np_status_t server_init();
+void server_deinit();
 np_status_t server_setup();
+void server_stop();
 void server_run();
 
 #endif
