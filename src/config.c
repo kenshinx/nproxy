@@ -129,29 +129,6 @@ config_redis_deinit(struct config_redis *redis)
     np_free(redis);
 }
 
-static void 
-config_destroy(struct config *cfg)
-{
-    if (cfg->args != NULL) {
-        array_destroy(cfg->args);
-    }
-
-    if (cfg->server != NULL) {
-        config_server_deinit(cfg->server);
-    }
-    
-    if (cfg->log != NULL) {
-        config_log_deinit(cfg->log);
-    }
-
-    if (cfg->redis != NULL) {
-        config_redis_deinit(cfg->redis);
-    }
-
-    if (cfg != NULL) {
-        np_free(cfg);
-    }
-}
 
 static struct config *
 config_init(char *filename)
@@ -612,6 +589,30 @@ config_parse(struct config *cfg)
     }
 
     return NP_OK;
+}
+
+void 
+config_destroy(struct config *cfg)
+{
+    if (cfg->args != NULL) {
+        array_destroy(cfg->args);
+    }
+
+    if (cfg->server != NULL) {
+        config_server_deinit(cfg->server);
+    }
+    
+    if (cfg->log != NULL) {
+        config_log_deinit(cfg->log);
+    }
+
+    if (cfg->redis != NULL) {
+        config_redis_deinit(cfg->redis);
+    }
+
+    if (cfg != NULL) {
+        np_free(cfg);
+    }
 }
 
 struct config *
