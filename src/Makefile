@@ -12,6 +12,9 @@ STD=-STD=C99 -pendantic
 WARN=-Wall -W
 OPT=-02
 DEBUG=-g -ggdb
+PROFILE=-pg
+LIBLRT=-lrt
+LIBPTHREAD=-lpthread 
 
 PREFIX?=$(ROOT)
 INSTALL_BIN=$(PREFIX)/bin
@@ -20,7 +23,7 @@ INSTALL=install
 RM=rm -rf
 
 FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS)
-FINAL_LDFLAGS=$(LDFLAGS) $(DEBUG)
+FINAL_LDFLAGS=$(LDFLAGS) $(DEBUG) $(LIBPTHREAD)
 FINAL_LIBS=-lm
 FINAL_CFLAGS+= -I../contrib/$(LIBYAML)/include
 FINAL_CFLAGS+= -I../contrib/$(HIREDIS)
