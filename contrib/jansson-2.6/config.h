@@ -101,9 +101,6 @@
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "jansson"
 
-/* Define to the home page for this package. */
-#define PACKAGE_URL ""
-
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "2.6"
 
@@ -121,7 +118,7 @@
 #define VERSION "2.6"
 
 /* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
-   <pthread.h>, or <semaphore.h> is not used. If the typedef were allowed, the
+   <pthread.h>, or <semaphore.h> is not used. If the typedef was allowed, the
    #define below would cause a syntax error. */
 /* #undef _UINT32_T */
 

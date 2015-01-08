@@ -28,7 +28,7 @@ distclean:
 
 libyaml:
 	@printf '%b %b\n' $(MAKECOLOR)MAKE$(ENDCOLOR) $(BINCOLOR)$@$(ENDCOLOR)
-	cd $(LIBYAML) && ./configure && $(MAKE)
+	cd $(LIBYAML) && autoreconf -ivf && ./configure && $(MAKE)
 
 .PHONY: libyaml
 
@@ -41,7 +41,7 @@ hiredis:
 
 jansson:
 	@printf '%b %b\n' $(MAKECOLOR)MAKE$(ENDCOLOR) $(BINCOLOR)$@$(ENDCOLOR)
-	cd $(JANSSON) && ./configure && $(MAKE) 
+	cd $(JANSSON) && autoreconf -ivf && ./configure && $(MAKE) 
 
 .PHONY: jansson
 
