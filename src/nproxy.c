@@ -118,7 +118,10 @@ static void
 np_setup_signal()
 {
     struct sigaction act;
-    
+
+    signal(SIGHUP, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
+
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
     act.sa_handler = np_handle_signal;
