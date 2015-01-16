@@ -201,7 +201,6 @@ server_get_proxy()
     np_proxy_t *proxy;
     
     i = np_random(server.proxy_pool->nelts);
-    
     proxy = array_get(server.proxy_pool, i);
 
     return proxy;
@@ -222,7 +221,6 @@ server_get_peeraddr(uv_stream_t *handle, struct sockaddr *addr)
     int err;
 
     len = sizeof(*addr);
-
     err = uv_tcp_getpeername((uv_tcp_t *)handle, addr, &len);
     if (err != 0) {
         log_error("get peer ip failed");
@@ -239,7 +237,6 @@ server_get_sockaddr(uv_stream_t *handle, struct sockaddr *addr)
     int len;
 
     len = sizeof(*addr);
-    
     err = uv_tcp_getsockname((uv_tcp_t *)handle, addr, &len);
     if (err != 0 ) {
         log_error("get sock ip failed");
@@ -367,7 +364,6 @@ server_do_handshake_parse(np_connect_t *conn, const uint8_t *data, ssize_t nread
     s5_error_t err;
 
     s5_session_t *sess = conn->sess;
-
     sess->state = SOCKS5_VERSION;
 
     err = socks5_parse(sess, &data, &nread);
