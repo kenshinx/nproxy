@@ -262,7 +262,7 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
                         sess->rep = SOCKS5_REP_CMD_NOT_SUPPORTED;
                         break;
                     case 8:
-                        sess->rep = SOCKS5_REP_AYP_NOT_SUPPORTED;
+                        sess->rep = SOCKS5_REP_ATYP_NOT_SUPPORTED;
                         break;
                     default:
                         sess->rep = SOCKS5_REP_UNSSIGNED;
