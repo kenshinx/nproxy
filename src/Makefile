@@ -19,9 +19,17 @@ INSTALL_BIN=$(PREFIX)/bin
 INSTALL=install
 RM=rm -rf
 
-FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS)
+ifeq ($(OS), Linux)
+	FINAL_CFLAGS=$(WARN) $(DEBUG) $(CFLAGS)
+	FINAL_LIBS=-lm -lrt -lpthread
+else
+ifeq ($(OS), Darwin)
+	FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS)
+	FINAL_LIBS=-lm
+endif
+endif
+
 FINAL_LDFLAGS=$(LDFLAGS) $(DEBUG)
-FINAL_LIBS=-lm -lrt -lpthread
 FINAL_CFLAGS+= -I../contrib/$(LIBYAML)/include
 FINAL_CFLAGS+= -I../contrib/$(HIREDIS)
 FINAL_CFLAGS+= -I../contrib/$(JANSSON)/src
