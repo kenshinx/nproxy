@@ -65,7 +65,8 @@ make-contrib:
 
 .PHONY: make-contrib
 
-#all: $(NPROXY_BIN)
+single: $(NPROXY_BIN)
+.PHONY: single
 
 all: $(PREPARE) $(NPROXY_BIN)
 

@@ -1,5 +1,5 @@
 
-default: all
+default: single
 
 .DEFAULT:
 	cd src && $(MAKE) $@
