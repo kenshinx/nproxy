@@ -262,10 +262,10 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
                         sess->rep = SOCKS5_REP_CMD_NOT_SUPPORTED;
                         break;
                     case 8:
-                        sess->rep = SOCKS5_REP_AYP_NOT_SUPPORTED;
+                        sess->rep = SOCKS5_REP_ATYP_NOT_SUPPORTED;
                         break;
                     default:
-                        sess->rep = SOCKS5_REP_UNSSIGNED;
+                        sess->rep = SOCKS5_REP_UNASSIGNED;
                         break;
                 }
                 
@@ -352,7 +352,7 @@ socks5_select_auth(s5_session_t *sess)
 
 const char *
 socks5_strerror(s5_error_t err) {
-#define SOCKS5_ERR_GEN(_, name, errmsg) case SOCKS5_ ## name: return errmsg;
+#define SOCKS5_ERR_GEN(_, name, errmsg) case name: return errmsg;
     switch (err) {
         SOCKS5_ERR_MAP(SOCKS5_ERR_GEN)
         default: ;  /* Silence s5_max_errors -Wswitch warning. */
@@ -361,5 +361,15 @@ socks5_strerror(s5_error_t err) {
     return "Unknown error.";
 }
 
+const char *
+socks5_strrep(s5_rep_t rep) {
+#define SOCKS5_REP_GEN(_, name, errmsg) case name: return errmsg;
+    switch (rep) {
+        SOCKS5_REP_MAP(SOCKS5_REP_GEN)
+        default: ;
+    }
+#undef SOCKS5_ERR_GEN
+    return "Unknown reply type.";
+}
 
 

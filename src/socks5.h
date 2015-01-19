@@ -20,21 +20,40 @@
 
 
 #define SOCKS5_ERR_MAP(V)                                                       \
-    V(-1, BAD_VERSION, "Bad protocol version.")                                 \
-    V(-2, BAD_CMD, "Bad protocol command.")                                     \
-    V(-3, BAD_ATYP, "Bad address type.")                                        \
-    V(-4, AUTH_ERROR, "Auth failure.")                                          \
-    V(-5, NEED_MORE_DATA, "Need more data.")                                    \
-    V(0, OK, "No error.")                                                       \
-    V(1, AUTH_SELECT, "Select authentication method.")                          \
-    V(2, AUTH_VERIFY, "Verify authentication.")                                 \
-    V(3, EXEC_CMD, "Execute command.")                                          \
+    V(-1, SOCKS5_BAD_VERSION, "Bad protocol version.")                                 \
+    V(-2, SOCKS5_BAD_CMD, "Bad protocol command.")                                     \
+    V(-3, SOCKS5_BAD_ATYP, "Bad address type.")                                        \
+    V(-4, SOCKS5_AUTH_ERROR, "Auth failure.")                                          \
+    V(-5, SOCKS5_NEED_MORE_DATA, "Need more data.")                                    \
+    V(0,  SOCKS5_OK, "No error.")                                                       \
+    V(1,  SOCKS5_AUTH_SELECT, "Select authentication method.")                          \
+    V(2,  SOCKS5_AUTH_VERIFY, "Verify authentication.")                                 \
+    V(3,  SOCKS5_EXEC_CMD, "Execute command.")                                          \
 
 typedef enum {
-#define SOCKS5_ERR_GEN(code, name, _) SOCKS5_ ## name = code,
+#define SOCKS5_ERR_GEN(code, name, _) name = code,
       SOCKS5_ERR_MAP(SOCKS5_ERR_GEN)
 #undef SOCKS5_ERR_GEN
 } s5_error_t;
+
+
+#define SOCKS5_REP_MAP(V)   \
+    V(0, SOCKS5_REP_SUCESS, "Connect sucess.") \
+    V(1, SOCKS5_REP_SOCKS_FAIL, "Connect failed.")  \
+    V(2, SOCKS5_REP_CONN_REFUSED_BY_RULESET, "Connect refused by ruleset.") \
+    V(3, SOCKS5_REP_NET_UNREACHABLE, "Net unreachable") \
+    V(4, SOCKS5_REP_HOST_UNREACHABLE, "Host unreachable") \
+    V(5, SOCKS5_REP_CONN_REFUSED, "Connect refused")\
+    V(6, SOCKS5_REP_TTL_EXPIRED, "TTL expired")\
+    V(7, SOCKS5_REP_CMD_NOT_SUPPORTED, "SOCKS5 CMD not supported")  \
+    V(8, SOCKS5_REP_ATYP_NOT_SUPPORTED, "SOCKS5 ATYP not supported") \
+    V(0xff, SOCKS5_REP_UNASSIGNED, "Unassigned error id")   \
+
+typedef enum {
+#define SOCKS5_REP_GEN(code, name, _) name = code,
+      SOCKS5_REP_MAP(SOCKS5_REP_GEN)
+#undef SOCKS5_REP_GEN
+} s5_rep_t;
 
 #define SOCKS5_AUTH_SUCESS  0
 
@@ -91,19 +110,6 @@ typedef enum {
     SOCKS5_ATYP_IPV6 =      0X04,
 } s5_atyp_t;
 
-typedef enum {
-    SOCKS5_REP_SUCESS,
-    SOCKS5_REP_SOCKS_FAIL,
-    SOCKS5_REP_CONN_REFUSED_BY_RULESET,
-    SOCKS5_REP_NET_UNREACHABLE,
-    SOCKS5_REP_HOST_UNREACHABLE,
-    SOCKS5_REP_CONN_REFUSED,
-    SOCKS5_REP_TTL_EXPIRED,
-    SOCKS5_REP_CMD_NOT_SUPPORTED,
-    SOCKS5_REP_AYP_NOT_SUPPORTED,
-    SOCKS5_REP_UNSSIGNED = 0xff,
-} s5_rep_t;
-
 typedef struct socks5_session {
     size_t          __len;
     s5_state_t      state;
@@ -126,6 +132,7 @@ typedef struct socks5_session {
 
 s5_error_t socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread);
 const char *socks5_strerror(s5_error_t err);
+const char *socks5_strrep(s5_rep_t rep);
 void socks5_select_auth(s5_session_t *sess);
 
 
