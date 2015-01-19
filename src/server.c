@@ -863,7 +863,7 @@ server_do_reply(np_connect_t *conn)
                 upstream->remoteip, socks5_strrep(upstream->sess->rep));
         client->phase = SOCKS5_ALMOST_DEAD;
         server_write(client, buf, 6+addr_len);
-        return SOCKS5_DEAD;
+        return SOCKS5_ALMOST_DEAD;
     }
 
     /* 
