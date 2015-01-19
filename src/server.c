@@ -916,7 +916,9 @@ server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_
         server_do_kill(in->ctx);
         return SOCKS5_DEAD;
     } else {
-        server_write(out, (const char *)data, nread);   
+        if (out->wstat == np_done) {
+            server_write(out, (const char *)data, nread);   
+        } 
         return SOCKS5_PROXY;
     }
     
@@ -955,7 +957,7 @@ server_conn_close(np_connect_t *conn)
 
     /* Before closed.  Make sure the connect has been established */
     if (conn->phase > SOCKS5_INIT) {
-        uv_read_stop((uv_stream_t *)&conn->handle);
+        //uv_read_stop((uv_stream_t *)&conn->handle);
         
         /*
         uv_shutdown_t *req = np_malloc(sizeof(uv_shutdown_t));
