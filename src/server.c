@@ -1012,11 +1012,12 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
     buf.len = len;
 
     conn->write_req.data = conn;
-
     conn->wstat = np_busy;
 
     r = uv_write(&conn->write_req, (uv_stream_t *)&conn->handle, &buf, 1 , server_on_write_done);
-
+    if (r < 0) {
+        UV_SHOW_ERROR(r, "write error");
+    }
 
     if (conn->phase == SOCKS5_PROXY) {
         log_debug("write: %s", data);
@@ -1025,13 +1026,7 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
             log_debug("write: %02X", data[i]);
         }
     }
-
-    if (r < 0) {
-        UV_SHOW_ERROR(r, "write error");
-    }
-    
     //server_timer_reset(np_connect_t *conn);
-    
 }
 
 
@@ -1045,7 +1040,6 @@ server_on_write_done(uv_write_t *req, int status)
     }
     
     conn = req->data;
-
     conn->last_status = status;
     if (status != 0) {
         log_warn("write error");
@@ -1055,7 +1049,6 @@ server_on_write_done(uv_write_t *req, int status)
     }
 
     conn->wstat = np_done;
-    
     server_do_callback(conn);
 }
 
