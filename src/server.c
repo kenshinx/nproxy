@@ -859,8 +859,8 @@ server_do_reply(np_connect_t *conn)
 
     if (upstream->sess->rep != SOCKS5_REP_SUCESS) {
         /* upstream connect remote failed */
-        log_error("upstream connect remote (%s) failed. error id: %d", 
-                upstream->remoteip, upstream->sess->rep);
+        log_error("upstream connect remote (%s) failed: %s", 
+                upstream->remoteip, socks5_strrep(upstream->sess->rep));
         client->phase = SOCKS5_ALMOST_DEAD;
         server_write(client, buf, 6+addr_len);
         return SOCKS5_DEAD;
