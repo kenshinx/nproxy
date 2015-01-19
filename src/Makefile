@@ -21,7 +21,7 @@ RM=rm -rf
 
 FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS)
 FINAL_LDFLAGS=$(LDFLAGS) $(DEBUG)
-FINAL_LIBS=-lm
+FINAL_LIBS=-lm -lrt -lpthread
 FINAL_CFLAGS+= -I../contrib/$(LIBYAML)/include
 FINAL_CFLAGS+= -I../contrib/$(HIREDIS)
 FINAL_CFLAGS+= -I../contrib/$(JANSSON)/src
