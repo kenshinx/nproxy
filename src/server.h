@@ -17,6 +17,8 @@
 //#define ENABLE_SOCKS5_SERVER_AUTH
 #define ENABLE_SOCKS5_CLIENT_AUTH
 
+#define TCP_KEEPALIVE_DELAY 60
+
 #define UV_CHECK(err, what) do {                                             \
     if ((err) != 0) {                                                       \
         log_error("server run failed. %s:%s", what, uv_err_name(err));      \
@@ -35,20 +37,6 @@
     }                                                                           \
     np_free(remote_addr);                                                       \
 } while(0)
-
-union proxy_handler {
-#ifdef SOCK5_PROXY_SUPPORT
-    struct socks5_handler;
-#endif
-
-#ifdef SOCK4_PROXY_SUPPORT
-    struct socks4_handler;
-#endif
-
-#ifdef HTTP_PROXY_SUPPORT
-    struct http_handler;
-#endif
-};
 
 typedef union {
     uv_req_t req;

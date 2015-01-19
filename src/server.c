@@ -1156,14 +1156,20 @@ server_on_new_connect(uv_stream_t *us, int status)
 
     uv_tcp_init(us->loop, &client->handle);
     uv_timer_init(us->loop, &client->timer);
-
-    //uv_tcp_keepalive(&client->handle, 0, 1);
     
     err = uv_accept((uv_stream_t *)us, (uv_stream_t *)&client->handle);
     if (err) {
         UV_SHOW_ERROR(err, "libuv on accept");
         return;
     }
+
+    #ifdef TCP_KEEPALIVE_DELAY 
+    err = uv_tcp_keepalive(&client->handle, 1, TCP_KEEPALIVE_DELAY);
+    if (err) {
+        UV_SHOW_ERROR(err, "libuv on set tcp keepalive");
+        return;
+    }
+    #endif
     
     err = server_get_peeraddr((uv_stream_t *)&client->handle, &client->srcaddr.addr);
     if (err) {
