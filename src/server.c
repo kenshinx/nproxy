@@ -204,6 +204,8 @@ server_get_proxy()
 static uv_buf_t *
 server_on_alloc_cb(uv_handle_t *handle, size_t suggested_size, uv_buf_t* buf) 
 {
+    np_connect_t *conn = handle->data;
+    conn->rstat = np_busy;
     *buf = uv_buf_init((char*) np_malloc(suggested_size), suggested_size);
     np_assert(buf->base != NULL);
     return buf;
@@ -991,6 +993,7 @@ server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
             return;
         }
     }
+    conn->rstat = np_done;
     server_do_parse(conn, (uint8_t *)buf->base, nread);
     np_free(buf->base);
 }
