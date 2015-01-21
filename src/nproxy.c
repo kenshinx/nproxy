@@ -90,25 +90,26 @@ np_print_run()
 static void
 np_handle_signal(int sig)
 {
-    server_stop();
-
     switch (sig) {
         case SIGINT:
             log_notice("Received SIGINT scheduling shutdown...");
+            server_stop();
             exit(1);
         case SIGTERM:
             log_notice("Received SIGTERM scheduling shutdown...");
+            server_stop();
             exit(0);
         case SIGUSR1:
             log_notice("Received SIGUSR1 call grpof hook before shutdown...");
+            server_stop();
             /* 
              * TODO
              * gprof program must call "exit"(2) then generate gmon.out file 
              * */
             exit(2);
         default:
-            log_notice("Received shutdown signal, scheduling shutdown...");
-            exit(1);
+            log_notice("Received unhandle signal");
+            return;
     }
 }
 
