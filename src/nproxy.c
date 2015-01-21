@@ -104,21 +104,23 @@ np_daemonize()
             /* parent process terminate */
             exit(0);
     }
-
+    
     if (chdir("/") < 0) {
         log_error("chdir(/) failed: %s", strerror(errno));
         return NP_ERROR;
     }
+    
 
     umask(0);
     
     if ((fd=open("/dev/null", O_RDWR, 0)) != -1) {
+        
+        
         dup2(fd, STDIN_FILENO);
         dup2(fd, STDOUT_FILENO);
         dup2(fd, STDERR_FILENO);
         if (fd > STDERR_FILENO) {
             close(fd);
-            return NP_ERROR;
         }
 
         return NP_OK;
@@ -185,7 +187,6 @@ main(int argc, char **argv)
     np_status_t status;
     
     log_init();
-    np_setup_signal();
 
     status = np_parse_option(argc, argv);
     if (status != NP_OK) {
@@ -212,8 +213,18 @@ main(int argc, char **argv)
         log_stderr("update log failed");
         exit(1);
     }
-    
+
     np_print_run();
+
+    np_setup_signal();
+
+    if (server.daemon) {
+        status = np_daemonize();
+        if (status != NP_OK) {
+            log_stderr("run as daemon failed.");
+            exit(1);
+        }
+    }
     
     server_run();
     
