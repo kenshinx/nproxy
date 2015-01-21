@@ -1,7 +1,5 @@
-#include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <signal.h>
 #include <sys/types.h>

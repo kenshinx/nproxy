@@ -1,11 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <fcntl.h>
 #include <stddef.h>
 #include <unistd.h>
 #include <stdarg.h>
 #include <time.h>
-#include <string.h>
 #include <sys/time.h>
 
 #include "core.h"

@@ -1,7 +1,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <time.h>
-#include <stdlib.h>
 #include <assert.h>
 
 #include "core.h"

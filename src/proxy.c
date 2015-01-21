@@ -1,4 +1,3 @@
-
 #include <jansson.h>
 #include <hiredis.h>
 
