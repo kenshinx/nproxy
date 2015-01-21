@@ -106,12 +106,11 @@ struct nproxy_server {
     char            *pidfile;
     pid_t           pid;
     unsigned        debug:1;
+    unsigned        daemon:1;
 }; 
 
 extern struct nproxy_server server;
 
-np_status_t server_init();
-void server_deinit();
 np_status_t server_setup();
 void server_stop();
 void server_run();

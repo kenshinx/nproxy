@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <unistd.h>
-#include <stdbool.h>
 #include <signal.h>
 #include <sys/types.h>
 
@@ -18,7 +17,6 @@
  */
 
 struct nproxy_server server;
-
 
 static void
 np_show_usage(void)
@@ -47,36 +45,87 @@ np_print_version(void)
 static np_status_t
 np_parse_option(int argc, char **argv)
 {
-    char *configfile = NPROXY_DEFAULT_CONFIG_FILE;
     if (argc >= 2) {   
         if (strcmp(argv[1], "-V") == 0 || strcmp(argv[1], "--version") == 0) {
             np_print_version();
         } else if (strcmp(argv[1], "-v") == 0 || strcmp(argv[1], "--verbose") == 0) {
             log_set_level(LOG_DEBUG);
-            server.debug = true;
+            server.debug = 1;
         } else if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
             np_show_usage();
         } else if (strcmp(argv[1], "-c") == 0 || strcmp(argv[1], "--config") == 0) {
             if (argc != 3) {
                 np_show_usage();
             } else {
-                configfile = argv[2];
+                server.configfile = argv[2];
             }
+        } else if (strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
+            server.daemon = 1;
         } else {
             np_show_usage();   
         }
     }
 
-    char *realpath;
-    if ((realpath = np_get_absolute_path(configfile)) != NULL) {
-        server.configfile = realpath;
-    } else {
-        log_stderr("configuration file %s can't found", configfile);
+    return NP_OK;
+}
+
+static np_status_t
+np_daemonize()
+{
+    pid_t pid, sid;
+    int fd;
+    
+    pid = fork();
+    switch (pid) {
+        case -1:
+            log_error("fork() failed: %s", strerror(errno));
+            return NP_ERROR;
+        case 0:
+            break;
+        default:
+            /* parent process terminate */
+            exit(0);
+    }
+
+    sid = setsid();
+    if (sid < 0) {
+        log_error("setsid failed: %s", strerror(errno));
         return NP_ERROR;
     }
 
-    return NP_OK;
+    pid = fork();
+    switch (pid) {
+        case -1:
+            log_error("double fork() failed: %s", strerror(errno));
+            return NP_ERROR;
+        case 0:
+            break;
+        default:
+            /* parent process terminate */
+            exit(0);
+    }
 
+    if (chdir("/") < 0) {
+        log_error("chdir(/) failed: %s", strerror(errno));
+        return NP_ERROR;
+    }
+
+    umask(0);
+    
+    if ((fd=open("/dev/null", O_RDWR, 0)) != -1) {
+        dup2(fd, STDIN_FILENO);
+        dup2(fd, STDOUT_FILENO);
+        dup2(fd, STDERR_FILENO);
+        if (fd > STDERR_FILENO) {
+            close(fd);
+            return NP_ERROR;
+        }
+
+        return NP_OK;
+    } else {
+        log_error("open('/dev/null') failed: %s", strerror(errno));
+        return NP_ERROR;
+    }
 }
 
 static void
@@ -134,16 +183,10 @@ main(int argc, char **argv)
 {
     
     np_status_t status;
+    char *realpath;
     
     log_init();
-
     np_setup_signal();
-
-    status = server_init();
-    if (status != NP_OK) {
-        log_stderr("init server failed.");
-        exit(1);
-    }
 
     status = np_parse_option(argc, argv);
     if (status != NP_OK) {

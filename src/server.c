@@ -15,6 +15,8 @@
 #include "redis.h"
 #include "server.h"
 
+static np_status_t server_init();
+static void server_deinit();
 static np_status_t server_connect_init(np_connect_t *conn);
 static void server_connect_deinit(np_connect_t *conn);
 static np_status_t server_context_init(np_context_t *ctx);
@@ -56,29 +58,18 @@ static int  server_connect(np_connect_t *conn);
 static void server_on_connect_done(uv_connect_t* req, int status);
 static void server_on_new_connect(uv_stream_t *us, int status);
 
-np_status_t 
+static np_status_t 
 server_init()
 {
-    server.us = NULL;
-    server.loop = NULL;
-
-    server.configfile = NULL;
-    server.cfg = NULL;
-    
     server.proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_proxy_t));
     if (server.proxy_pool == NULL) {
         return  NP_ERROR;
     }
 
-    server.pidfile = NULL;
-    server.pid = getpid();
-    
-    server.debug = false;
-
     return NP_OK;
 }
 
-void 
+static void 
 server_deinit()
 {
     config_destroy(server.cfg);
@@ -1198,6 +1189,25 @@ np_status_t
 server_setup()
 {
     np_status_t status;
+    char *realpath;
+    char *configfile = NPROXY_DEFAULT_CONFIG_FILE;
+
+    status = server_init();
+    if (status != NP_OK) {
+        log_stderr("init server failed.");
+        exit(1);
+    }
+
+    if (server.configfile == NULL) {
+        server.configfile = NPROXY_DEFAULT_CONFIG_FILE;
+        
+    }
+    if ((realpath = np_get_absolute_path(server.configfile)) != NULL) {
+        server.configfile = realpath;
+    } else {
+        log_stderr("configuration file %s can't found", server.configfile);
+        return NP_ERROR;
+    }
 
     status = server_load_config(server);
     if (status != NP_OK) {
