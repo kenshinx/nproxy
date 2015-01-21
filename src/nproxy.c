@@ -183,7 +183,6 @@ main(int argc, char **argv)
 {
     
     np_status_t status;
-    char *realpath;
     
     log_init();
     np_setup_signal();

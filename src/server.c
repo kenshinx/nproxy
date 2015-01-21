@@ -1190,7 +1190,6 @@ server_setup()
 {
     np_status_t status;
     char *realpath;
-    char *configfile = NPROXY_DEFAULT_CONFIG_FILE;
 
     status = server_init();
     if (status != NP_OK) {
