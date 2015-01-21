@@ -29,6 +29,7 @@ np_show_usage(void)
         "   -V --version        :show version and exit" CRLF
         "   -v --verbose        :set log level be debug" CRLF
         "   -c --config         :set configuration file (default:%s)" CRLF
+        "   -d --config         :run as daemonize" CRLF
         "",
         confile
     );
@@ -109,13 +110,10 @@ np_daemonize()
         log_error("chdir(/) failed: %s", strerror(errno));
         return NP_ERROR;
     }
-    
 
     umask(0);
     
     if ((fd=open("/dev/null", O_RDWR, 0)) != -1) {
-        
-        
         dup2(fd, STDIN_FILENO);
         dup2(fd, STDOUT_FILENO);
         dup2(fd, STDERR_FILENO);
