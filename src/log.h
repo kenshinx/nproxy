@@ -14,6 +14,8 @@
 #define LOG_LEVEL_MAX   6
 #define LOG_UNDEFINED_LEVEL -1
 
+#define LOG_DEFAULT_LEVEL LOG_INFO;
+
 #define LOG_MAX_LENGTH  512
 
 #define log_debug(...) do {                                     \

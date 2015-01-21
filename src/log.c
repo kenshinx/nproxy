@@ -24,7 +24,7 @@ void
 log_init()
 {
     struct logger *l = &logger;
-    l->level = LOG_NOTICE;
+    l->level = LOG_DEFAULT_LEVEL;
     l->fname = NULL;
     l->fd = stdout;
 }
