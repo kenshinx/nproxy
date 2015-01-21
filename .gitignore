@@ -52,3 +52,5 @@ contrib/yaml-0.1.5/src/.libs/
 /bin/nproxy
 
 ./tags
+
+/logs/nproxy.log

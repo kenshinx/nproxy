@@ -179,6 +179,30 @@ server_load_proxy_pool()
     return NP_OK;
 }
 
+static np_status_t
+server_load_log()
+{
+    /*
+     * Update logger with the option in config file 
+     */
+    int log_level;
+    const char *log_file;
+    
+    if (server.debug) { 
+        log_level = LOG_DEBUG;
+    } else {
+        log_level = log_level_to_int(server.cfg->log->level->data);
+    }
+
+    if (server.daemon) {
+        log_file = server.cfg->log->file->data;
+    } else {
+        log_file = NULL;
+    }
+    
+    return log_update(log_level, log_file);
+}
+
 static np_proxy_t *
 server_get_proxy()
 {
@@ -1208,7 +1232,7 @@ server_setup()
         return NP_ERROR;
     }
 
-    status = server_load_config(server);
+    status = server_load_config();
     if (status != NP_OK) {
         log_stderr("load config '%s' failed", server.configfile);
         return status;
@@ -1216,12 +1240,18 @@ server_setup()
     
     config_dump(server.cfg);
 
-    status = server_load_proxy_pool(server);
+    status = server_load_proxy_pool();
     if (status != NP_OK) {
         log_stderr("load proxy pool from redis failed.");
         return status;
     }
     proxy_pool_dump(server.proxy_pool);
+
+    status = server_load_log();
+    if (status != NP_OK) {
+        log_stderr("load log failed");
+        return status;
+    }
 
     return NP_OK;
 }
@@ -1232,6 +1262,7 @@ server_stop()
 
     log_debug("server stopping");
     uv_stop(server.loop);
+    log_destroy();
     server_deinit();
 }
 

@@ -198,23 +198,7 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    /*
-     * Update logger with the option in config file 
-     */
-    if (server.debug) {
-        status = log_update(LOG_DEBUG, server.cfg->log->file->data);
-    } else {
-        int log_level = log_level_to_int(server.cfg->log->level->data);
-        status = log_update(log_level, server.cfg->log->file->data);
-    }
-    if (status != NP_OK) {
-        log_stderr("update log failed");
-        exit(1);
-    }
-
     np_print_run();
-
-    np_setup_signal();
 
     if (server.daemon) {
         status = np_daemonize();
@@ -223,6 +207,8 @@ main(int argc, char **argv)
             exit(1);
         }
     }
+
+    np_setup_signal();
     
     server_run();
     
