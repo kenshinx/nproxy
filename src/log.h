@@ -60,7 +60,7 @@ struct logger {
 
 void log_init();
 int log_update(int level, const char *fname);
-void log_destory(void);
+void log_destroy();
 int log_set_level(int level);
 void log_level_to_text(int level, char *text);
 int log_level_to_int(const char *text);

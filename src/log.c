@@ -57,7 +57,7 @@ log_update(int level, const char *fname)
 
 
 void
-log_detroy(void)
+log_destroy()
 {
     struct logger *l = &logger;
 
@@ -110,7 +110,6 @@ log_level_to_int(const char *text)
     return LOG_UNDEFINED_LEVEL;  
     
 }
-
 
 void
 _log(int level, const char *file, int line, const char *fmt, ...)
