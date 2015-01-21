@@ -1,4 +1,4 @@
-#include "log.h"
+#include "core.h"
 #include "socks5.h"
 
 s5_error_t

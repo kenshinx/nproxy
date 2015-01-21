@@ -8,7 +8,6 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "util.h"
 #include "core.h"
 #include "log.h"
 
@@ -33,7 +32,7 @@ log_init()
     l->fd = stdout;
 }
 
-np_status_t
+int
 log_update(int level, const char *fname)
 {
     struct logger *l = &logger;
@@ -72,7 +71,7 @@ log_detroy(void)
     fclose(l->fd);
 }
 
-np_status_t
+int
 log_set_level(int level)
 {
     struct logger *l = &logger;

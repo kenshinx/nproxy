@@ -1,8 +1,7 @@
 #ifndef _NPROXY_PROXY_H_
 #define _NPROXY_PROXY_H_
 
-#include "string.h"
-#include "util.h"
+#include "core.h"
 
 #ifndef SOCKS5_PROXY_SUPPORT
 #define SOCKS5_PROXY_SUPPORT

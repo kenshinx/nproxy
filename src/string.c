@@ -106,3 +106,14 @@ string_copy(np_string *dst, np_string *src)
 
     return NP_OK;
 }
+
+int 
+string_array_length(const char *arr[])
+{
+    int count = 0;
+    while (arr[count] != NULL) {
+        count++;
+    }
+    return count;
+}
+

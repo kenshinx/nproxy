@@ -5,7 +5,6 @@
 
 #include "core.h"
 
-
 #define LOG_DEBUG       0
 #define LOG_VERBOSE     1
 #define LOG_INFO        2
@@ -60,9 +59,9 @@ struct logger {
 };
 
 void log_init();
-np_status_t log_update(int level, const char *fname);
+int log_update(int level, const char *fname);
 void log_destory(void);
-np_status_t log_set_level(int level);
+int log_set_level(int level);
 void log_level_to_text(int level, char *text);
 int log_level_to_int(const char *text);
 void _log(int level, const char *file, int line, const char *fmt, ...);

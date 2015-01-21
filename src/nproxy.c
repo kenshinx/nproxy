@@ -6,12 +6,9 @@
 #include <signal.h>
 #include <sys/types.h>
 
-#include "array.h"
-#include "string.h"
-#include "util.h"
+#include "core.h"
 #include "config.h"
 #include "version.h"
-#include "log.h"
 #include "server.h"
 
 /*
@@ -106,7 +103,10 @@ np_handle_signal(int sig)
             exit(0);
         case SIGUSR1:
             log_notice("Received SIGUSR1 call grpof hook before shutdown...");
-            /* gprof program must call "exit"(2) then generate gmon.out file */
+            /* 
+             * TODO
+             * gprof program must call "exit"(2) then generate gmon.out file 
+             * */
             exit(2);
         default:
             log_notice("Received shutdown signal, scheduling shutdown...");

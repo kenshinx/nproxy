@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "core.h"
 #include "util.h"
-#include "log.h"
 
 char *
 np_get_current_path(void)
@@ -37,16 +37,6 @@ np_get_absolute_path(char *filename)
     } else {
         return NULL;
     }
-}
-
-int 
-string_array_length(const char *arr[])
-{
-    int count = 0;
-    while (arr[count] != NULL) {
-        count++;
-    }
-    return count;
 }
 
 void *

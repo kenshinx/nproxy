@@ -7,6 +7,7 @@
 
 #include "core.h"
 
+
 typedef struct np_string {
     uint32_t    len;
     char        *data;
@@ -29,6 +30,7 @@ bool string_compare(np_string *str1, np_string *str2);
 
 int string_copy(np_string *dst, np_string *src);
 
+int string_array_length(const char *arr[]);
 
 
 static inline void

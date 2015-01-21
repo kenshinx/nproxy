@@ -44,8 +44,8 @@ NPROXY_LD=$(CC) $(FINAL_LDFLAGS)
 NPROXY_BIN=nproxy
 NPROXY_OBJ=nproxy.o config.o proxy.o util.o log.o array.o string.o socks5.o redis.o server.o
 
-nproxy.o: nproxy.c core.h config.h 
-config.o: config.c config.h core.h ../contrib/$(LIBYAML)/include/yaml.h
+nproxy.o: nproxy.c core.h  config.h 
+config.o: config.c config.h ../contrib/$(LIBYAML)/include/yaml.h
 proxy.o: proxy.c proxy.h ../contrib/$(JANSSON)/src/jansson.h ../contrib/$(HIREDIS)/hiredis.h 
 log.o: log.c log.h  
 util.o: util.c util.h 

@@ -4,7 +4,6 @@
 #include <sys/types.h>
 
 #include "core.h"
-#include "array.h"
 
 np_array *
 array_create(uint32_t n, size_t size)

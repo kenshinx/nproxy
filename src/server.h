@@ -7,8 +7,6 @@
 #include <hiredis.h>
 
 #include "core.h"
-#include "array.h"
-#include "string.h"
 #include "socks5.h"
 
 #define NPROXY_PROXY_POOL_LENGTH 200

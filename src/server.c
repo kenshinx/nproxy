@@ -10,11 +10,8 @@
 #include <uv.h>
 #include <hiredis.h>
 
-#include "string.h"
-#include "array.h"
+#include "core.h"
 #include "config.h"
-#include "log.h"
-#include "util.h"
 #include "proxy.h"
 #include "socks5.h"
 #include "redis.h"

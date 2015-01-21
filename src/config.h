@@ -5,8 +5,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include "string.h"
-#include "array.h"
+#include "core.h"
 
 #define CONFIG_ROOT_DEPTH   1
 #define CONFIG_MAX_DEPTH    CONFIG_ROOT_DEPTH + 1

@@ -1,8 +1,7 @@
 
 #include <hiredis.h>
 
-#include "log.h"
-#include "config.h"
+#include "core.h"
 
 
 redisContext *

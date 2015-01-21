@@ -2,9 +2,7 @@
 #include <jansson.h>
 #include <hiredis.h>
 
-#include "string.h"
-#include "log.h"
-#include "util.h"
+#include "core.h"
 #include "proxy.h"
 
 
