@@ -1120,7 +1120,6 @@ server_connect(np_connect_t *conn)
     int r;
 
     conn->connect_req.data = conn;
-
     r = uv_tcp_connect(&conn->connect_req,
                        &conn->handle, 
                        (const struct sockaddr*)&conn->dstaddr, 
@@ -1135,9 +1134,7 @@ server_on_connect_done(uv_connect_t* req, int status)
     np_connect_t *conn;
 
     conn = req->data; 
-
     conn->last_status = status;
-    
     server_do_callback(conn);
 }
 
@@ -1259,7 +1256,6 @@ server_setup()
 void 
 server_stop()
 {
-
     log_debug("server stopping");
     uv_stop(server.loop);
     log_destroy();
