@@ -235,8 +235,20 @@ np_print_run()
 }
 
 static void
-np_start()
+np_run()
 {
+    np_status_t status;
+
+    if (server.daemon) {
+        status = np_daemonize();
+        if (status != NP_OK) {
+            log_stderr("run as daemon failed.");
+            exit(1);
+        }
+    }
+
+    server.pid = getpid();
+
     server_run();
 }
 
@@ -260,17 +272,9 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    if (server.daemon) {
-        status = np_daemonize();
-        if (status != NP_OK) {
-            log_stderr("run as daemon failed.");
-            exit(1);
-        }
-    }
-
     np_setup_signal();
     np_print_run();
-    np_start();
+    np_run();
     np_shutdown();
     exit(1);
     
