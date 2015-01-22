@@ -15,14 +15,10 @@
 #include "redis.h"
 #include "server.h"
 
-static np_status_t server_init();
-static void server_deinit();
 static np_status_t server_connect_init(np_connect_t *conn);
 static void server_connect_deinit(np_connect_t *conn);
 static np_status_t server_context_init(np_context_t *ctx);
 static void server_context_deinit(np_context_t *ctx);
-static np_status_t server_load_config();
-static np_status_t server_load_proxy_pool();
 static np_status_t server_get_peeraddr(uv_stream_t *handle, struct sockaddr *addr);
 static np_status_t server_get_sockaddr(uv_stream_t *handle, struct sockaddr *addr);
 static np_status_t server_sockaddr_to_str(struct sockaddr_storage *addr, char *ip);
@@ -58,7 +54,7 @@ static int  server_connect(np_connect_t *conn);
 static void server_on_connect_done(uv_connect_t* req, int status);
 static void server_on_new_connect(uv_stream_t *us, int status);
 
-static np_status_t 
+np_status_t 
 server_init()
 {
     server.proxy_pool = array_create(NPROXY_PROXY_POOL_LENGTH, sizeof(np_proxy_t));
@@ -69,7 +65,7 @@ server_init()
     return NP_OK;
 }
 
-static void 
+void 
 server_deinit()
 {
     config_destroy(server.cfg);
@@ -145,7 +141,7 @@ server_context_deinit(np_context_t *ctx)
     np_free(ctx);
 }
 
-static np_status_t
+np_status_t
 server_load_config()
 {
     
@@ -160,7 +156,7 @@ server_load_config()
 }
 
 
-static np_status_t
+np_status_t
 server_load_proxy_pool()
 {
     redisContext *c;
@@ -179,7 +175,7 @@ server_load_proxy_pool()
     return NP_OK;
 }
 
-static np_status_t
+np_status_t
 server_load_log()
 {
     /*
@@ -1206,62 +1202,11 @@ server_on_new_connect(uv_stream_t *us, int status)
     log_info("ACCEPT CONNECT from %s", client->srcip);
 }
 
-np_status_t
-server_setup()
-{
-    np_status_t status;
-    char *realpath;
-
-    status = server_init();
-    if (status != NP_OK) {
-        log_stderr("init server failed.");
-        exit(1);
-    }
-
-    if (server.configfile == NULL) {
-        server.configfile = NPROXY_DEFAULT_CONFIG_FILE;
-        
-    }
-    if ((realpath = np_get_absolute_path(server.configfile)) != NULL) {
-        server.configfile = realpath;
-    } else {
-        log_stderr("configuration file %s can't found", server.configfile);
-        return NP_ERROR;
-    }
-
-    status = server_load_config();
-    if (status != NP_OK) {
-        log_stderr("load config '%s' failed", server.configfile);
-        return status;
-    }    
-    
-    config_dump(server.cfg);
-
-    status = server_load_proxy_pool();
-    if (status != NP_OK) {
-        log_stderr("load proxy pool from redis failed.");
-        return status;
-    }
-    proxy_pool_dump(server.proxy_pool);
-
-    status = server_load_log();
-    if (status != NP_OK) {
-        log_stderr("load log failed");
-        return status;
-    }
-
-    return NP_OK;
-}
-
 void 
 server_stop()
 {
-    log_debug("server stopping");
     uv_stop(server.loop);
-    log_destroy();
-    server_deinit();
 }
-
 
 void
 server_run()
@@ -1293,5 +1238,4 @@ server_run()
     UV_CHECK(err, "libuv listen");
 
     uv_run(loop, UV_RUN_DEFAULT);
-    
 }

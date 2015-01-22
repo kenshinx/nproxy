@@ -111,7 +111,11 @@ struct nproxy_server {
 
 extern struct nproxy_server server;
 
-np_status_t server_setup();
+np_status_t server_init();
+void server_deinit();
+np_status_t server_load_config();
+np_status_t server_load_proxy_pool();
+np_status_t server_load_log();
 void server_stop();
 void server_run();
 

@@ -1,6 +1,7 @@
 #ifndef _NPROXY_PROXY_H_
 #define _NPROXY_PROXY_H_
 
+#include "redis.h"
 #include "core.h"
 
 #ifndef SOCKS5_PROXY_SUPPORT

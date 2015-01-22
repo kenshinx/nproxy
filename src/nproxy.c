@@ -5,14 +5,15 @@
 
 #include "core.h"
 #include "config.h"
+#include "proxy.h"
 #include "version.h"
 #include "server.h"
 
 /*
  *        s5         s5 
  * client --> nproxy --> (upstream)proxy --> remote 
- *    ^         | ^             |
- *    |_ _ _ _  v | _ _ _ _ _ _ v
+ *    ^         | ^             |   ^          |
+ *    |_ _ _ _  v | _ _ _ _ _ _ v   |_ _ _ _ _ v
  *               
  */
 
@@ -68,6 +69,14 @@ np_parse_option(int argc, char **argv)
     }
 
     return NP_OK;
+}
+
+static void 
+np_shutdown()
+{
+    server_stop();
+    log_destroy();
+    server_deinit();
 }
 
 static np_status_t
@@ -129,28 +138,20 @@ np_daemonize()
 }
 
 static void
-np_print_run()
-{
-    log_stdout("nproxy server start");
-    log_stdout("listen on %s:%d", server.cfg->server->listen->data, server.cfg->server->port);
-    log_stdout("config file: %s", server.configfile);
-}
-
-static void
 np_handle_signal(int sig)
 {
     switch (sig) {
         case SIGINT:
             log_notice("Received SIGINT scheduling shutdown...");
-            server_stop();
+            np_shutdown();
             exit(1);
         case SIGTERM:
             log_notice("Received SIGTERM scheduling shutdown...");
-            server_stop();
+            np_shutdown();
             exit(0);
         case SIGUSR1:
             log_notice("Received SIGUSR1 call grpof hook before shutdown...");
-            server_stop();
+            np_shutdown();
             /* 
              * TODO
              * gprof program must call "exit"(2) then generate gmon.out file 
@@ -178,6 +179,67 @@ np_setup_signal()
     sigaction(SIGUSR1, &act, NULL);
 }
 
+static np_status_t
+np_setup()
+{
+    np_status_t status;
+    char *realpath;
+
+    status = server_init();
+    if (status != NP_OK) {
+        log_stderr("init server failed.");
+        exit(1);
+    }
+
+    if (server.configfile == NULL) {
+        server.configfile = NPROXY_DEFAULT_CONFIG_FILE;
+        
+    }
+    if ((realpath = np_get_absolute_path(server.configfile)) != NULL) {
+        server.configfile = realpath;
+    } else {
+        log_stderr("configuration file %s can't found", server.configfile);
+        return NP_ERROR;
+    }
+
+    status = server_load_config();
+    if (status != NP_OK) {
+        log_stderr("load config '%s' failed", server.configfile);
+        return status;
+    }    
+    
+    config_dump(server.cfg);
+
+    status = server_load_proxy_pool();
+    if (status != NP_OK) {
+        log_stderr("load proxy pool from redis failed.");
+        return status;
+    }
+    proxy_pool_dump(server.proxy_pool);
+
+    status = server_load_log();
+    if (status != NP_OK) {
+        log_stderr("load log failed");
+        return status;
+    }
+
+    return NP_OK;
+}
+
+static void
+np_print_run()
+{
+    log_stdout("nproxy server start");
+    log_stdout("listen on %s:%d", server.cfg->server->listen->data, server.cfg->server->port);
+    log_stdout("config file: %s", server.configfile);
+}
+
+static void
+np_start()
+{
+    server_run();
+}
+
 int
 main(int argc, char **argv)
 {
@@ -192,13 +254,11 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    status = server_setup();
+    status = np_setup();
     if (status != NP_OK) {
         log_stderr("setup server failed.");
         exit(1);
     }
-
-    np_print_run();
 
     if (server.daemon) {
         status = np_daemonize();
@@ -209,9 +269,9 @@ main(int argc, char **argv)
     }
 
     np_setup_signal();
-    
-    server_run();
-    
+    np_print_run();
+    np_start();
+    np_shutdown();
     exit(1);
     
 }
