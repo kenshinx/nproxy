@@ -1037,7 +1037,7 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
             log_debug("write: %02X", data[i]);
         }
     }
-    //server_timer_reset(np_connect_t *conn);
+    server_timer_reset(conn);
 }
 
 
@@ -1147,6 +1147,7 @@ server_connect(np_connect_t *conn)
                        &conn->handle, 
                        (const struct sockaddr*)&conn->dstaddr, 
                        server_on_connect_done);
+    server_timer_reset(conn);
     return r;
     
 }
@@ -1225,8 +1226,7 @@ server_on_new_connect(uv_stream_t *us, int status)
     if (err) {
         UV_SHOW_ERROR(err, "libuv read start");
     }
-
-    
+    server_timer_reset(client);
     log_info("ACCEPT CONNECT from %s", client->srcip);
 }
 
