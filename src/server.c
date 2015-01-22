@@ -48,6 +48,8 @@ static void server_on_read_done(uv_stream_t *stream, ssize_t nread, const uv_buf
 static uv_buf_t *server_on_alloc_cb(uv_handle_t *handle /*handle*/, size_t suggested_size, uv_buf_t* buf); 
 static void server_write(np_connect_t *conn, const char *data, unsigned int len);
 static void server_on_write_done(uv_write_t *req, int status);
+static void server_timer_reset(np_connect_t *conn);
+static void server_on_timer_expire(uv_timer_t *handle, int status);
 static void server_get_addrinfo(np_connect_t *conn, const char *hostname); 
 static void server_on_get_addrinfo_done(uv_getaddrinfo_t *req, int status, struct addrinfo *ai);
 static int  server_connect(np_connect_t *conn);
@@ -1061,6 +1063,31 @@ server_on_write_done(uv_write_t *req, int status)
     server_do_callback(conn);
 }
 
+static void
+server_timer_reset(np_connect_t *conn)
+{
+    int r;
+    
+    conn->timer.data = conn;
+    r = uv_timer_start(&conn->timer, (uv_timer_cb)server_on_timer_expire, CONNECT_IDLE_TIMEOUT, 0);
+    if (r < 0) {
+        UV_SHOW_ERROR(r, "set timer failed");
+    }
+}
+
+static void
+server_on_timer_expire(uv_timer_t *handle, int status)
+{
+    np_connect_t *conn;
+
+    conn = handle->data;
+    conn->last_status = UV_ETIMEDOUT;
+    if (status < 0) {
+        UV_SHOW_ERROR(status, "timer failed");
+    }
+    server_do_callback(conn);
+}
+
 static void 
 server_get_addrinfo(np_connect_t *conn, const char *hostname) 
 {
@@ -1080,7 +1107,7 @@ server_get_addrinfo(np_connect_t *conn, const char *hostname)
     if (r<0) {
       UV_SHOW_ERROR(r, "get addrinfo error");
     }
-// conn_timer_reset(c);
+    server_timer_reset(conn);
 }
 
 static void 
@@ -1198,6 +1225,7 @@ server_on_new_connect(uv_stream_t *us, int status)
     if (err) {
         UV_SHOW_ERROR(err, "libuv read start");
     }
+
     
     log_info("ACCEPT CONNECT from %s", client->srcip);
 }

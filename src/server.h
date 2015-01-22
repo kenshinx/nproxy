@@ -17,6 +17,8 @@
 
 #define TCP_KEEPALIVE_DELAY 60
 
+#define CONNECT_IDLE_TIMEOUT 60
+
 #define UV_CHECK(err, what) do {                                             \
     if ((err) != 0) {                                                       \
         log_error("server run failed. %s:%s", what, uv_err_name(err));      \
