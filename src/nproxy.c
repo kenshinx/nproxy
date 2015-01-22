@@ -71,14 +71,6 @@ np_parse_option(int argc, char **argv)
     return NP_OK;
 }
 
-static void 
-np_shutdown()
-{
-    server_stop();
-    log_destroy();
-    server_deinit();
-}
-
 static np_status_t
 np_daemonize()
 {
@@ -135,6 +127,48 @@ np_daemonize()
         log_error("open('/dev/null') failed: %s", strerror(errno));
         return NP_ERROR;
     }
+}
+
+static np_status_t
+np_create_pidfile()
+{
+    FILE *fp;
+    char *pidfile;
+
+    pidfile = server.cfg->server->pfile->data;
+    fp = fopen(pidfile, "w");
+    if (fp) {
+        fprintf(fp, "%d\n", server.pid);
+        fclose(fp);
+        return NP_OK;
+    } else {
+        log_error("write pidfile '%s' failed: %s", pidfile,  strerror(errno));
+        return NP_ERROR;
+    }
+}
+
+static void
+np_remove_pidfile()
+{
+    int status;
+    char *pidfile;
+    
+    pidfile = server.cfg->server->pfile->data;
+    status = unlink(pidfile);
+    if (status < 0) {
+        log_warn("Remove pdifile '%s' failed: %s", pidfile, strerror(errno));
+    }
+}
+
+static void 
+np_shutdown()
+{
+    server_stop();
+    log_destroy();
+    if (server.daemon) {
+        np_remove_pidfile();
+    }
+    server_deinit();
 }
 
 static void
@@ -248,6 +282,15 @@ np_run()
     }
 
     server.pid = getpid();
+
+    if (server.daemon) {
+        status = np_create_pidfile();
+        if (status != NP_OK) {
+            log_stderr("write pidfile failed.");
+            exit(1);
+        }
+    }
+
 
     server_run();
 }

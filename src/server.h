@@ -103,7 +103,6 @@ struct nproxy_server {
     char            *configfile;
     struct config   *cfg;
     np_array        *proxy_pool;   
-    char            *pidfile;
     pid_t           pid;
     unsigned        debug:1;
     unsigned        daemon:1;
