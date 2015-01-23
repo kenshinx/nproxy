@@ -17,7 +17,7 @@
 
 #define TCP_KEEPALIVE_DELAY 60
 
-#define CONNECT_IDLE_TIMEOUT 30000
+#define CONNECT_IDLE_TIMEOUT 60000  /* 1 minute */
 
 #define UV_CHECK(err, what) do {                                             \
     if ((err) != 0) {                                                       \
