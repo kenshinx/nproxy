@@ -442,7 +442,7 @@ server_do_sub_negotiate_parse(np_connect_t *client, const uint8_t *data, ssize_t
     sess->state = SOCKS5_AUTH_PW_VER; 
 
     if (client->last_status != 0 ) {
-        log_error("last phase error: %s", socks5_strerror(client->last_status));
+        log_error("last phase error: %s", uv_strerror(client->last_status));
         server_do_kill(client->ctx);
         return SOCKS5_DEAD;
     }
@@ -493,7 +493,7 @@ server_do_request_parse(np_connect_t *client, const uint8_t *data, ssize_t nread
     sess->state = SOCKS5_REQ_VER;
 
     if (client->last_status != 0 ) {
-        log_error("last phase error: %s", socks5_strerror(client->last_status));
+        log_error("last phase error: %s", uv_strerror(client->last_status));
         server_do_kill(client->ctx);
         return SOCKS5_DEAD;
     }
@@ -541,9 +541,8 @@ server_do_request_parse(np_connect_t *client, const uint8_t *data, ssize_t nread
 static np_phase_t
 server_do_request_lookup(np_connect_t *client)
 {
-
     if (client->last_status != 0 ) {
-        log_error("LOOKUP for %s error: %s", client->sess->daddr, socks5_strerror(client->last_status));
+        log_error("LOOKUP for %s error: %s", client->sess->daddr, uv_strerror(client->last_status));
         server_write(client, "\5\4\0\1\0\0\0\0\0\0", 10);
         return SOCKS5_ALMOST_DEAD;
     } else {
@@ -553,7 +552,6 @@ server_do_request_lookup(np_connect_t *client)
         log_info("LOOKUP %s -> %s", client->sess->daddr, client->remoteip);
         return server_upstream_do_connect(client);
     }
-    
 }
 
 /*
@@ -652,7 +650,7 @@ server_upstream_do_handshake(np_connect_t *upstream)
 
     if (upstream->last_status != 0 ) {
         log_error("connect upstream '%s' error: %s", 
-                upstream->dstip, socks5_strerror(upstream->last_status));
+                upstream->dstip, uv_strerror(upstream->last_status));
         server_do_kill(upstream->ctx);
         return SOCKS5_DEAD;
     }
@@ -688,7 +686,7 @@ server_upstream_do_handshake_parse(np_connect_t *upstream, const uint8_t *data, 
 
     if (upstream->last_status != 0) {
         log_error("upstream do handshake phase error: %s", 
-                 socks5_strerror(upstream->last_status));
+                        uv_strerror(upstream->last_status));
         server_do_kill(upstream->ctx);
         return SOCKS5_DEAD;
     }
@@ -751,7 +749,7 @@ server_upstream_do_sub_negotiate_parse(np_connect_t *upstream, const uint8_t *da
     
     if (upstream->last_status != 0) {
         log_error("upstream (%s) send sub-nego mesg  error: %s", 
-                 upstream->dstip, socks5_strerror(upstream->last_status));
+                 upstream->dstip, uv_strerror(upstream->last_status));
         server_do_kill(upstream->ctx);
         return SOCKS5_DEAD;
     }
@@ -817,7 +815,7 @@ server_upstream_do_reply_parse(np_connect_t *upstream, const uint8_t *data, ssiz
     
     if (upstream->last_status != 0) {
         log_error("upstream (%s) send request mesg  error: %s", 
-                 upstream->dstip, socks5_strerror(upstream->last_status));
+                 upstream->dstip, uv_strerror(upstream->last_status));
         server_do_kill(upstream->ctx);
         return SOCKS5_DEAD;
     }
@@ -887,8 +885,7 @@ static np_phase_t
 server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 {
     if (conn->last_status != 0) {
-        log_error("last write error: %s", 
-                 socks5_strerror(conn->last_status));
+        log_error("last write error: %s", uv_strerror(conn->last_status));
         server_do_kill(conn->ctx);
         return SOCKS5_DEAD;
     }
@@ -1075,7 +1072,7 @@ server_on_timer_expire(uv_timer_t *handle, int status)
         UV_SHOW_ERROR(status, "timer failed");
     }
     log_warn("CONNECT EXPIRED (%s -> %s)", conn->srcip, conn->dstip);
-    server_do_callback(conn);
+    server_do_kill(conn->ctx);
 }
 
 static void 
