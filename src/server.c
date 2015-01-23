@@ -910,8 +910,6 @@ server_do_proxy(np_connect_t *conn, const uint8_t *data, ssize_t nread)
 static np_phase_t
 server_do_cycle(np_connect_t *in, np_connect_t *out, const uint8_t *data, ssize_t nread)
 {
-    log_debug("write: %zd bytes", nread);
-
     if (nread ==  UV_EOF) {
         log_info("REQUEST (%s) FINISHED", out->remoteip);
         server_do_kill(in->ctx);
@@ -1017,7 +1015,6 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
 
     uv_buf_t buf;
     int r;
-    unsigned int i;
 
     buf.base = (char *)data;
     buf.len = len;
@@ -1028,14 +1025,6 @@ server_write(np_connect_t *conn, const char *data, unsigned int len)
     r = uv_write(&conn->write_req, (uv_stream_t *)&conn->handle, &buf, 1 , server_on_write_done);
     if (r < 0) {
         UV_SHOW_ERROR(r, "write error");
-    }
-
-    if (conn->phase == SOCKS5_PROXY) {
-        log_debug("write: %s", data);
-    } else {
-        for (i=0; i<len; i++) {
-            log_debug("write: %02X", data[i]);
-        }
     }
     server_timer_reset(conn);
 }
@@ -1085,6 +1074,7 @@ server_on_timer_expire(uv_timer_t *handle, int status)
     if (status < 0) {
         UV_SHOW_ERROR(status, "timer failed");
     }
+    log_warn("CONNECT EXPIRED (%s -> %s)", conn->srcip, conn->dstip);
     server_do_callback(conn);
 }
 

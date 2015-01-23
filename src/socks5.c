@@ -17,7 +17,6 @@ socks5_parse(s5_session_t *sess, const uint8_t **data, ssize_t *nread)
     while (i < n) {
         c = p[i];
         i += 1;
-        log_debug("read %02X", c);
         switch (sess->state) {
             /* handshake phase start */
             case SOCKS5_VERSION:
