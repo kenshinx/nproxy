@@ -27,6 +27,8 @@
 
 #define NOT_REACHED() np_assert(0)
 
+#define UNUSED(x) do {((void)(x));} while (0)
+
 char *np_get_current_path(void);
 char *np_get_absolute_path(char *filename);
 void *_np_malloc(size_t size, const char *fname, int line);

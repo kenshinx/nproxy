@@ -154,6 +154,7 @@ server_load_config()
     }
     server.cfg = cfg;
     log_info("load config '%s' sucess", server.configfile);
+
     return NP_OK;
 }
 
@@ -171,8 +172,8 @@ server_load_proxy_pool()
     }
     
     proxy_load_pool(server.proxy_pool, c, server.cfg->server->redis_key->data);
-
     redisFree(c);
+    log_info("load proxy pool sucess");
 
     return NP_OK;
 }
@@ -1149,6 +1150,17 @@ server_on_connect_done(uv_connect_t* req, int status)
     server_do_callback(conn);
 }
 
+
+static void
+server_update_proxy_async(uv_timer_t *handle, int status)
+{
+    UNUSED(handle);
+    if (status < 0) {
+        UV_SHOW_ERROR(status, "timer failed");
+    }
+    server_load_proxy_pool();
+}
+
 static void
 server_on_new_connect(uv_stream_t *us, int status)
 {
@@ -1228,6 +1240,7 @@ server_run()
 {
     uv_tcp_t *us;
     uv_loop_t *loop;
+    uv_timer_t *timer;
     struct sockaddr_in addr;
     int err;
 
@@ -1235,7 +1248,6 @@ server_run()
     if (us == NULL) {
         return;
     }
-
     loop = uv_default_loop();
 
     uv_tcp_init(loop, us);
@@ -1251,6 +1263,13 @@ server_run()
     
     err = uv_listen((uv_stream_t *)us, MAX_CONNECT_QUEUE, server_on_new_connect);
     UV_CHECK(err, "libuv listen");
+
+    timer = (uv_timer_t *)np_malloc(sizeof(*timer));
+    if (timer == NULL) {
+        return; 
+    }
+    uv_timer_init(loop, timer);
+    uv_timer_start(timer, (uv_timer_cb)server_update_proxy_async, 0, LOAD_PROXY_POOL_INTERVAL);
 
     uv_run(loop, UV_RUN_DEFAULT);
 }

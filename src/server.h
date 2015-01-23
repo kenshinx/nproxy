@@ -19,6 +19,8 @@
 
 #define CONNECT_IDLE_TIMEOUT 60000  /* 1 minute */
 
+#define LOAD_PROXY_POOL_INTERVAL 60000
+
 #define UV_CHECK(err, what) do {                                             \
     if ((err) != 0) {                                                       \
         log_error("server run failed. %s:%s", what, uv_err_name(err));      \
