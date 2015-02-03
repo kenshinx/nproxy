@@ -24,10 +24,13 @@ def add(host, port, proto="socks5", username=None, password=None):
     r.sadd(REDIS_KEY, data)
 
     print "sucess"
+
+def usage():
+    return "Usage: %s <ip:port> [options] \n\npython %s 10.16.20.55:1221" %(sys.argv[0], sys.argv[0])
     
 
 def main():
-    parser = optparse.OptionParser()
+    parser = optparse.OptionParser(usage= usage())
     parser.add_option("-u", "--username", action="store", dest="username", type="string")
     parser.add_option("-p", "--password", action="store", dest="password", type="string")
     parser.add_option("", "--proto", action="store", dest="proto", type="string", default="socks5")
