@@ -5,10 +5,10 @@ import redis
 import json
 import optparse
 
-REDIS_HOST = "dev1.netlab.corp.qihoo.net"
+REDIS_HOST = "127.0.0.1"
 REDIS_PORT = 6379
 
-REDIS_KEY = "netlab:nproxy"
+REDIS_KEY = "nproxy:xxx"
 
 def add(host, port, proto="socks5", username=None, password=None):
 
