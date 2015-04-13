@@ -1,0 +1,23 @@
+server:
+  listen: 0.0.0.0
+  port: 1234
+  daemon: true
+  pfile: /var/run/nproxy.pid
+  redis_key: "nproxy"
+
+  #socks server authentifacation
+  username: bob
+  password: bob@private
+  
+
+log:
+  file: /var/log/nproxy.log #default null. log will be redirect to stdout
+  level: INFO #DEBUG | INFO |NOTICE | WARNING | ERROR
+
+redis:
+  server: 127.0.0.1
+  port: 6379
+  db: 0
+  timeout: 5  #5 seconds
+
+
